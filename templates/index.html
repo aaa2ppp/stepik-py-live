@@ -2,21 +2,19 @@
 
 {% block app_content %}
     <!-- <a class="btn btn-primary" href="{{ url_for('live') }}">Создать жизнь</a> -->
-    <div class="settings">
-        <form action="" method="post">
-            {{ form.csrf_token() }}
-            {% for field in form if not field.name in ("csrf_token", "submit") %}
-                <p>
-                    {{ field.label() }}:
-                    {{ field }}
-                    {% for error in field.errors %}
-                        {{ error }}
-                    {% endfor %}
-                </p>
-            {% endfor %}
+    <form action="" method="post">
+        {{ form.csrf_token() }}
+        {% for field in form if not field.name in ("csrf_token", "submit") %}
             <p>
-                {{ form.submit(class_="btn btn-primary") }}
+                {{ field.label() }}:
+                {{ field }}
+                {% for error in field.errors %}
+                    {{ error }}
+                {% endfor %}
             </p>
-        </form>
-    </div>
+        {% endfor %}
+        <p>
+            {{ form.submit(class_="btn btn-primary") }}
+        </p>
+    </form>
 {% endblock %}

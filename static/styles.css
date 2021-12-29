@@ -1,17 +1,20 @@
+.content {
+    text-align: center;
+    padding-top: 0.5rem;
+}
+
 .world {
     border: 1px solid black;
     border-collapse: collapse;
-}
-
-td {
-    border: 1px solid black;
+    margin: auto;
 }
 
 .cell {
+    border: 1px solid black;
     padding: 5px;
     background: whitesmoke;
-    width: 30px;
-    height: 30px;
+    width: 1rem;
+    height: 1rem;
 }
 
 .living-cell {
@@ -22,46 +25,18 @@ td {
     background: darkred;
 }
 
-.content {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.settings {
-    position: absolute;
-    top: 33%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-}
-
-a, table {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-}
-
-.home {
-    top: 5%;
-    left: 45%;
-}
-
-.refresh {
-    top: 5%;
-    left: 55%;
-}
+/* Q: What drugs?.. */
 
 .counter {
-    margin: 20px 3px 3px;
-    padding: 5px;
+    display: inline-block; 
+    margin: 0 3px;
+    padding: 5px 7px;
     font-family: "Book Antiqua", "Arial";
     background: aliceblue;
     font-size: 30px;
     border: 1px solid indigo;
     border-radius: 50%;
 }
-
 
 .btn {
     display: inline-block;

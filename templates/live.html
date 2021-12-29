@@ -1,9 +1,19 @@
 {% extends "base.html" %}
 
 {% block app_content %}
-    <a href="{{ url_for('index') }}" class="btn btn-warning home">На главную</a>
-    <a href="{{ url_for('live') }}"  class="btn btn-info refresh">Обновить</a>
-    <div class="counter">{{ game.counter }}</div>
+    <table style="margin: auto; border: 0;">
+        <tr valign="middle">
+            <td>
+                <a href="{{ url_for('index') }}" class="btn btn-warning home">На главную</a>
+            </td>
+            <td>
+                <div class="counter">{{ game.counter }}</div>
+            </td>
+            <td>
+                <a href="{{ url_for('live') }}"  class="btn btn-info refresh">Обновить</a>
+            </td>
+        </tr>
+    </table><br>
     <table class="world">
         {% for i in range(0, game.world | length) %}
             <tr>
