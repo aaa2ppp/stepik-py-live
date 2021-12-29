@@ -4,8 +4,7 @@ from flask_wtf import FlaskForm
 from wtforms import IntegerField, SubmitField
 from wtforms.validators import InputRequired, NumberRange
 
-from game_of_live import GameOfLife
-
+from game_of_life import GameOfLife
 
 
 app = Flask(__name__)
@@ -75,18 +74,18 @@ def index():
             height=form.height.data,
             width=form.width.data
         )
-        return redirect("/live")
+        return redirect(url_for("live"))
 
     else:
-        return render_template(url_for("index"), form=form)
+        return render_template("index.html", form=form)
 
 
 @app.route("/live")
 def live():
     game = GameOfLife()
     game.form_new_generation()
-    return render_template(url_for("live"), game=game)
+    return render_template("live.html", game=game)
 
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5000)
+    app.run(host="0.0.0.0", port=5000)
