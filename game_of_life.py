@@ -18,13 +18,17 @@ class GameOfLife(metaclass=SingletonMeta):
     def __init__(self, width=20, height=20):
         self.__width = width
         self.__height = height
+
+        # NOTE: The world will be created when the universe is first updated in the form_new_generation method.
         self.world = None
         self.old_world = None
-        self.counter = 0
+        self.counter = -1
 
     def form_new_generation(self):
         if not self.world:
             self.world = self.generate_universe()
+            self.old_world = None
+            self.counter = 0
             return
 
         universe = self.world
@@ -45,6 +49,7 @@ class GameOfLife(metaclass=SingletonMeta):
                     continue
                 new_world[i][j] = 0
 
+        # NOTE: Deep copying is NOT REQUIRED here!
         self.old_world = self.world
         self.world = new_world
         self.counter += 1
