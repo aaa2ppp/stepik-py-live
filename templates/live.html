@@ -1,41 +1,77 @@
 {% extends "base.html" %}
 
 {% block app_content %}
+    <!-- TODO: replace table to div -->
     <table style="margin: auto; border: 0;">
         <tr valign="middle">
             <td>
-                <a href="{{ url_for('index') }}" class="btn btn-warning home">На главную</a>
+                <a href="{{ url_for('index') }}" class="btn btn-warning">На главную</a>
             </td>
             <td>
-                <div class="counter">{{ game.counter }}</div>
+                <div id="counter" class="counter">&nbsp;</div>
             </td>
             <td>
-                <a href="{{ url_for('live') }}"  class="btn btn-info refresh">Обновить</a>
+                <a href="#" class="btn btn-info" onclick="refreshClick(this); return false;">
+                    <script>
+                        document.write(autoUpdate ? STOP_LABEL : CONTINUE_LABEL);
+                    </script>
+                </a>
             </td>
         </tr>
     </table><br>
-    <table class="world">
-        {% for i in range(0, game.world | length) %}
-            <tr>
-                {% for j in range(0, game.world[i] | length) %}
-                    {% if game.world[i][j] %}
-                        <td class="cell living-cell"></td>
-                    {% elif game.old_world and game.old_world[i][j] %}
-                        <td class="cell dead-cell"></td>
-                    {% else %}
-                        <td class="cell"></td>
-                    {% endif %}
-                {% endfor %}
-            </tr>
-        {% endfor %}
-    </table>
+    <div id="wordContainer" class="container"></div>
 {% endblock %}
 
 {% block scripts %}
     {{ super() }}
     <script>
-        window.onload = function () {
-            setInterval(() => window.location.reload(), 1000);
+        const STOP_LABEL = "Остановить";
+        const CONTINUE_LABEL = "Продолжить";
+        let autoUpdate = true;
+        let timerId = null;
+        loadWorld();
+
+        function loadWorld() {
+            fetch("/world")
+                .then((response) => response.text())
+                .then((text) => {
+                    if (document.readyState == 'loading') {
+                        document.addEventListener('DOMContentLoaded', () => showWorld(text))
+                    } else {
+                        showWorld(text);
+                    }
+                });
         }
-   </script>
+
+        function showWorld(text) {
+            document.getElementById('wordContainer').innerHTML = text;
+            updateCounter();
+            if (autoUpdate) {
+                timerId = setTimeout(() => {timerId = null; loadWorld()}, 1000);
+            }
+        }
+
+        // XXX: through hidden div -- ugly
+        function updateCounter() {
+            hiddenCounter = document.getElementById('hiddenCounter');
+            counter = document.getElementById('counter');
+            counter.textContent = hiddenCounter.textContent;
+        }
+
+        function refreshClick(target) {
+            if (autoUpdate) {
+                autoUpdate = false;
+                if (timerId) {
+                    clearTimeout(timerId);
+                    timerId = null;
+                }
+                target.textContent = CONTINUE_LABEL;
+            } else {
+                autoUpdate = true;
+                target.textContent = STOP_LABEL;
+                loadWorld();
+            }
+        }        
+    </script>
+
 {% endblock %}
