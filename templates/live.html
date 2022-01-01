@@ -8,70 +8,20 @@
                 <a href="{{ url_for('index') }}" class="btn btn-warning">На главную</a>
             </td>
             <td>
-                <div id="counter" class="counter">&nbsp;</div>
+                <div id="counter" class="counter">{{ game.counter }}</div>
             </td>
             <td>
-                <a href="#" class="btn btn-info" onclick="refreshClick(this); return false;">
-                    <script>
-                        document.write(autoUpdate ? STOP_LABEL : CONTINUE_LABEL);
-                    </script>
-                </a>
+                <a id="refreshButton" href="{{ url_for('live') }}" class="btn btn-info">Обновить</a>
             </td>
         </tr>
     </table><br>
-    <div id="wordContainer" class="container"></div>
+    <div id="worldContainer" class="container">
+        {% include "_world.html" %}
+    </div>
 {% endblock %}
 
 {% block scripts %}
     {{ super() }}
-    <script>
-        const STOP_LABEL = "Остановить";
-        const CONTINUE_LABEL = "Продолжить";
-        let autoUpdate = true;
-        let timerId = null;
-        loadWorld();
-
-        function loadWorld() {
-            fetch("/world")
-                .then((response) => response.text())
-                .then((text) => {
-                    if (document.readyState == 'loading') {
-                        document.addEventListener('DOMContentLoaded', () => showWorld(text))
-                    } else {
-                        showWorld(text);
-                    }
-                });
-        }
-
-        function showWorld(text) {
-            document.getElementById('wordContainer').innerHTML = text;
-            updateCounter();
-            if (autoUpdate) {
-                timerId = setTimeout(() => {timerId = null; loadWorld()}, 1000);
-            }
-        }
-
-        // XXX: through hidden div -- ugly
-        function updateCounter() {
-            hiddenCounter = document.getElementById('hiddenCounter');
-            counter = document.getElementById('counter');
-            counter.textContent = hiddenCounter.textContent;
-        }
-
-        function refreshClick(target) {
-            if (autoUpdate) {
-                autoUpdate = false;
-                if (timerId) {
-                    clearTimeout(timerId);
-                    timerId = null;
-                }
-                target.textContent = CONTINUE_LABEL;
-            } else {
-                autoUpdate = true;
-                target.textContent = STOP_LABEL;
-                loadWorld();
-            }
-        }        
-    </script>
-
+    <script src="{{ url_for('static', filename='live.js') }}"></script>
 {% endblock %}
+ 
