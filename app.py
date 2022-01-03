@@ -20,7 +20,7 @@ def index():
             height=form.height.data,
             width=form.width.data
         )
-        return redirect(url_for("live", autoUpdate=1))
+        return redirect(url_for("live", autoUpdate="on"))
 
     else:
         return render_template("index.html", form=form)
@@ -30,7 +30,7 @@ def index():
 def live():
     game = GameOfLife()
     game.form_new_generation()
-    template = "_world.html" if request.args.get("worldOnly") else "live.html"
+    template = "_world.html" if "worldOnly" in request.args else "live.html"
     return render_template(template, game=game)
 
 
