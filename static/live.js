@@ -74,11 +74,12 @@
     function startAutoUpdateNow() {
         const id = updateId;
         updateWorld((success) => {
+            if (id !== updateId) {
+                return
+            }
             if (!success) {
                 autoUpdate(false);
-                return;
-            }
-            if (id === updateId) {
+            } else {
                 startAutoUpdateWithTimeout();
             }
         });
@@ -87,8 +88,12 @@
     let timerId = null;
 
     function startAutoUpdateWithTimeout() {
+        const id = updateId
         if (timerId === null) {
             timerId = setTimeout(() => {
+                if(id !== updateId) {
+                    return
+                }
                 timerId = null;
                 startAutoUpdateNow();
             }, UPDATE_TIMEOUT);
