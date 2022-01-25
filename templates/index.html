@@ -15,5 +15,9 @@
         <p>
             {{ form.submit(class_="btn btn-primary") }}
         </p>
+        <div style="font-size:small">
+            <p>Допустимые значения от 2 до 100<br>
+            Если есть проблемы с вводом, воспользуйтесь <a href="{{ url_for('new_live') }}">прямой ссылкой</a></p>
+        </div>
     </form>
 {% endblock %}

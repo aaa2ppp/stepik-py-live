@@ -25,6 +25,10 @@ def index():
     else:
         return render_template("index.html", form=form)
 
+@app.route("/new-live")
+def new_live():
+    GameOfLife(height=20, width=20)
+    return redirect(url_for("live", autoUpdate="on"))
 
 @app.route("/live")
 def live():
