@@ -31,7 +31,6 @@ $ source env/bin/activate
 ```
 
 ## run application
- application
 ```
 (env) > flask run
 ```
@@ -44,7 +43,7 @@ $ source env/bin/activate
 (env) > flask run
 ```
 
-## for nix sh (bash)
+### for nix sh (bash)git
 ```
 (env) $ FLASK_DEBUG=1 flask run
 ```
