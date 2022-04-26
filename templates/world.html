@@ -1,14 +1,14 @@
-<div id="hiddenCounter" style="display: none">{{ game.counter }}</div>
-<table class="world">
+<div id="hiddenCounter" class="hidden">{{ game.counter }}</div>
+<table class="world" style="font-family: monospace;">
     {% for i in range(0, game.world | length) %}
     <tr>
         {% for j in range(0, game.world[i] | length) %}
             {% if game.world[i][j] %}
-                <td class="cell living-cell"></td>
+                <td class="cell living-cell">X</td>
             {% elif game.old_world and game.old_world[i][j] %}
-                <td class="cell dead-cell"></td>
+                <td class="cell dead-cell">D</td>
             {% else %}
-                <td class="cell"></td>
+                <td class="cell">_</td>
             {% endif %}
         {% endfor %}
     </tr>

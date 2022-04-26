@@ -3,12 +3,10 @@ from flask.helpers import url_for
 from game_of_life import GameOfLife
 from forms import WorldSizeForm
 
-
 app = Flask(__name__)
 
 # Ensure templates are auto-reloaded
 app.config["TEMPLATES_AUTO_RELOAD"] = True
-
 app.config["SECRET_KEY"] = "R2Gl3QGoPnqDth4N"
 
 
@@ -25,17 +23,33 @@ def index():
     else:
         return render_template("index.html", form=form)
 
-@app.route("/new-live")
-def new_live():
-    GameOfLife(height=20, width=20)
-    return redirect(url_for("live", autoUpdate="on"))
 
 @app.route("/live")
 def live():
     game = GameOfLife()
     game.form_new_generation()
-    template = "_world.html" if "worldOnly" in request.args else "live.html"
-    return render_template(template, game=game)
+    return render_template("live.html", game=game)
+
+
+@app.route("/world")
+def world():
+    game = GameOfLife()
+    game.form_new_generation()
+    return render_template("world.html", game=game)
+
+# Direct links are FOR TEST ONLY
+
+
+@app.route("/new-live")
+def new_live():
+    game = GameOfLife(height=20, width=20)
+    return redirect(url_for("live"))
+
+
+@app.route("/new-world")
+def new_world():
+    game = GameOfLife(height=20, width=20)
+    return redirect(url_for("world"))
 
 
 if __name__ == "__main__":

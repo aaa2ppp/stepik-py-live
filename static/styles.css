@@ -1,5 +1,6 @@
 .content {
     text-align: center;
+    margin: auto;
     padding-top: 0.5rem;
 }
 
@@ -12,17 +13,32 @@
 .cell {
     border: 1px solid black;
     padding: 5px;
+    color: whitesmoke;
     background: whitesmoke;
     width: 1rem;
     height: 1rem;
 }
 
 .living-cell {
+    color: lightgreen;
     background: lightgreen;
 }
 
 .dead-cell {
+    color: darkred;
     background: darkred;
+}
+
+.hidden {
+    display: none
+}
+
+.centered {
+    margin: auto
+}
+
+.column {
+    width: 640px
 }
 
 /* Q: What drugs?.. */

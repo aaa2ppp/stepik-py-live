@@ -1,6 +1,8 @@
 {% extends 'base.html' %}
 
 {% block app_content %}
+
+<div class="centered column">
     <form action="" method="post">
         {{ form.csrf_token() }}
         {% for field in form if not field.name in ("csrf_token", "submit") %}
@@ -12,12 +14,28 @@
                 {% endfor %}
             </p>
         {% endfor %}
+        <div style="font-size:small">
+            <p>Допустимые значения от 2 до 100</p>
+        </div>
         <p>
             {{ form.submit(class_="btn btn-primary") }}
         </p>
-        <div style="font-size:small">
-            <p>Допустимые значения от 2 до 100<br>
-            Если есть проблемы с вводом, воспользуйтесь <a href="{{ url_for('new_live') }}">прямой ссылкой</a></p>
-        </div>
     </form>
+    <hr>
+    <div style="text-align:left;font-size:small">
+    <p><h3>В случае проблем:</h3>
+        <ul>
+            <li>Проверьте, что правильно инициализировали окружение проекта (см. <code>README.md</code>).</li>
+            <li>Проверьте, что активировано виртуальное окружение (см. <code>README.md</code>).</li>
+            <li>Запустите приложение в режиме отладки (см. <code>README.md</code>).</li>
+            <li>Попробуйте воспользоваться прямыми ссылками на <a href="{{ url_for('new_live') }}">игру</a> или на <a href="{{ url_for('new_world') }}">фрейм мира</a>.</li>
+            <li>Попробуйте отключить <code>JavaScript</code>.</li>
+            <li>Попробуйте отключить <code>CSS</code>.</li>
+            <li>Пожалуйста, в отчете укажите используемую версию <code>python</code>, вывод команды <code>`pip freeze'</code>,
+                версию браузера и OS.
+            </li>
+        </ul>
+    </p>
+    </div>
+</div>
 {% endblock %}

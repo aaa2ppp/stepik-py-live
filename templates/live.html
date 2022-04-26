@@ -2,7 +2,7 @@
 
 {% block app_content %}
     <!-- TODO: replace table to div -->
-    <table style="margin: auto; border: 0;">
+    <table class="centered">
         <tr valign="middle">
             <td>
                 <a href="{{ url_for('index') }}" class="btn btn-warning">На главную</a>
@@ -16,7 +16,7 @@
         </tr>
     </table><br>
     <div id="worldContainer" class="container">
-        {% include "_world.html" %}
+        {% include "world.html" %}
     </div>
 {% endblock %}
 

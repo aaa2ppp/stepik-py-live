@@ -2,7 +2,7 @@
 
 (function () {
     const UPDATE_TIMEOUT = 1000;
-    const WORLD_URL = '/live?worldOnly=on';
+    const WORLD_URL = '/world';
     const WORLD_CONTAINER_ID = 'worldContainer';
     const HIDDEN_COUNTER_ID = 'hiddenCounter';
     const COUNTER_ID = 'counter';
