@@ -12,7 +12,7 @@ app.config["SECRET_KEY"] = "R2Gl3QGoPnqDth4N"
 @app.route("/", methods=["GET", "POST"])
 def index():
     form = WorldSizeForm()
-    
+
     if request.method == "POST" and form.validate_on_submit():
         GameOfLife(
             height=form.height.data,
