@@ -2,40 +2,61 @@
 
 {% block app_content %}
 
-<div class="centered column">
-    <form action="" method="post">
-        {{ form.csrf_token() }}
-        {% for field in form if not field.name in ("csrf_token", "submit") %}
+    <div class="centered column">
+        <form action="" method="post">
+            {{ form.csrf_token() }}
+            {% for field in form if not field.name in ("csrf_token", "submit") %}
+                <p>
+                    {{ field.label() }}: {{ field }}
+                    {% for error in field.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </p>
+            {% endfor %}
+            <div style="font-size: small">
+                <p>Допустимые значения от 2 до 100</p>
+            </div>
+            <p>{{ form.submit(class_="btn btn-primary") }}</p>
+        </form>
+        <hr />
+        <div style="text-align: left; font-size: small">
+            <h3>Обнаруженные проблемы:</h3>
             <p>
-                {{ field.label() }}:
-                {{ field }}
-                {% for error in field.errors %}
-                    {{ error }}
-                {% endfor %}
+                Половина рецензентов сообщает о полной работоспособности программы. Вторая половина сообщает,
+                что отсутствует возможность ввести данные в форму и не отображается поле игры. Т.е. о
+                <strong>полной неработоспособности!</strong> У меня нет причин сомневаться в этих рецензия.
+                Проблемы описаны достаточно подробно и схоже разными рецензентами. Но, к сожалению, я не смог
+                воспроизвести ни одну из них :(
             </p>
-        {% endfor %}
-        <div style="font-size:small">
-            <p>Допустимые значения от 2 до 100</p>
+
+            <h4>Пожалуйста, если Вы столкнетесь с описанными выше проблемами:</h4>
+            <ul>
+                <li>Проверьте, что правильно инициализировали проект (см. <code>README.md</code>).</li>
+                <li>Проверьте, что активировано виртуальное окружение (см. <code>README.md</code>).</li>
+                <li>Запустите приложение в режиме отладки (см. <code>README.md</code>).</li>
+                <li>
+                    Попробуйте воспользоваться прямыми ссылками на <a href="{{ url_for('new_live') }}"><strong>игру</strong></a> и отдельно
+                    на <a href="{{ url_for('new_world') }}"><strong>поле игры</strong></a>. Во втором случае, должно отображаться текстовое
+                    представление поля игры (без элементов управления и подгружаемых стилей). Но при обновлении страницы,
+                    жизнь должна жить :)
+                </li>
+                <li>Попробуйте отключить в браузере <code>JavaScript</code>.</li>
+                <li>
+                    Попробуйте не использовать подгружаемые стили.<br />
+                    Для этого можно (в случае с <code>Chrome</code>) в консоли разработчика на вкладке
+                    <code>Network</code> из контекстного меню заблокировать загрузку файла <code>styles.css</code>.<br />
+                    Другой способ - просто переименуйте файл <code>static/styles.css</code> в дереве проекта.
+                </li>
+                <li>
+                    Если что-то из вышеперечисленного (или что-либо другое) помогло или изменило ситуацию, сообщите мне об
+                    этом этом.
+                </li>
+                <li>
+                    Пожалуйста, укажите в вашей рецензии используемую версию <code>python</code>, вывод команды
+                    <code>`pip&nbsp;freeze'</code>, версию браузера и OS, или любую другую информацию, которую Вы сочтете нужной,
+                    чтобы помочь мне воспроизвести проблему.
+                </li>
+            </ul>
         </div>
-        <p>
-            {{ form.submit(class_="btn btn-primary") }}
-        </p>
-    </form>
-    <hr>
-    <div style="text-align:left;font-size:small">
-    <p><h3>В случае проблем:</h3>
-        <ul>
-            <li>Проверьте, что правильно инициализировали окружение проекта (см. <code>README.md</code>).</li>
-            <li>Проверьте, что активировано виртуальное окружение (см. <code>README.md</code>).</li>
-            <li>Запустите приложение в режиме отладки (см. <code>README.md</code>).</li>
-            <li>Попробуйте воспользоваться прямыми ссылками на <a href="{{ url_for('new_live') }}">игру</a> или на <a href="{{ url_for('new_world') }}">фрейм мира</a>.</li>
-            <li>Попробуйте отключить <code>JavaScript</code>.</li>
-            <li>Попробуйте отключить <code>CSS</code>.</li>
-            <li>Пожалуйста, в отчете укажите используемую версию <code>python</code>, вывод команды <code>`pip freeze'</code>,
-                версию браузера и OS.
-            </li>
-        </ul>
-    </p>
     </div>
-</div>
 {% endblock %}
