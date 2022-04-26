@@ -5,7 +5,6 @@ from forms import WorldSizeForm
 
 app = Flask(__name__)
 
-# Ensure templates are auto-reloaded
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 app.config["SECRET_KEY"] = "R2Gl3QGoPnqDth4N"
 
@@ -13,6 +12,7 @@ app.config["SECRET_KEY"] = "R2Gl3QGoPnqDth4N"
 @app.route("/", methods=["GET", "POST"])
 def index():
     form = WorldSizeForm()
+    
     if request.method == "POST" and form.validate_on_submit():
         GameOfLife(
             height=form.height.data,
@@ -37,18 +37,19 @@ def world():
     game.form_new_generation()
     return render_template("world.html", game=game)
 
-# Direct links are FOR TEST ONLY
+
+# The following two direct links are FOR TESTS ONLY
 
 
 @app.route("/new-live")
 def new_live():
-    game = GameOfLife(height=20, width=20)
+    GameOfLife(height=20, width=20)
     return redirect(url_for("live"))
 
 
 @app.route("/new-world")
 def new_world():
-    game = GameOfLife(height=20, width=20)
+    GameOfLife(height=20, width=20)
     return redirect(url_for("world"))
 
 

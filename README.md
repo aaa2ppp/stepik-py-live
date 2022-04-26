@@ -1,6 +1,6 @@
 # stepik-py-live
 
-## initialize project
+## Initialize project
 
 ### for win cmd
 ```
@@ -16,7 +16,8 @@ $ source env/bin/activate
 (env) $ pip install -r requirements.txt
 ```
 
-## activate virtual environment
+## Activate virtual environment
+If the virtual environment is activated, the command line must contain `(env)`
 
 ### for win cmd
 ```
@@ -30,12 +31,12 @@ $ source env/bin/activate
 (env) $
 ```
 
-## run application
+## Run application
 ```
 (env) > flask run
 ```
 
-## run application in debug mode
+## Run application in debug mode
 
 ### for win cmd
 ```
@@ -43,7 +44,7 @@ $ source env/bin/activate
 (env) > flask run
 ```
 
-### for nix sh (bash)git
+### for nix sh (bash)
 ```
 (env) $ FLASK_DEBUG=1 flask run
 ```
