@@ -26,16 +26,14 @@ def index():
 
 @app.route("/live")
 def live():
-    game = GameOfLife()
-    game.form_new_generation()
-    return render_template("live.html", game=game)
+    life = GameOfLife().create_next_generation()
+    return render_template("live.html", life=life)
 
 
 @app.route("/world")
 def world():
-    game = GameOfLife()
-    game.form_new_generation()
-    return render_template("world.html", game=game)
+    life = GameOfLife().create_next_generation()
+    return render_template("world.html", life=life)
 
 
 # The following two direct links are FOR TESTS ONLY
