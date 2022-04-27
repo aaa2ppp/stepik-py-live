@@ -40,7 +40,6 @@ def world():
 
 # The following two direct links are FOR TESTS ONLY
 
-
 @app.route("/new-live")
 def new_live():
     GameOfLife(height=20, width=20)

@@ -13,11 +13,14 @@
     let worldContainer;
     let counter;
     let refreshButton;
+    let updateLoopId = 0;
+    let timerId = null;
+    init();
 
     // ------------------------------------------------------------------------
 
     function init() {
-        if (document.readyState == 'loading') {
+        if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', init);
             return;
         }
@@ -48,15 +51,13 @@
 
     // ------------------------------------------------------------------------
 
-    let updateId = 0;
-
     // usage: [oldValue =] autoUpdate([newValue]);
     function autoUpdate(value) {
         const url = new URL(location);
         const oldValue = url.searchParams.has('autoUpdate');
 
-        if (value !== undefined && value != oldValue) {
-            updateId++;
+        if (value !== undefined && value !== oldValue) {
+            updateLoopId++;
             if (value) {
                 url.searchParams.set('autoUpdate', 'on');
                 startAutoUpdateNow();
@@ -72,10 +73,10 @@
     }
 
     function startAutoUpdateNow() {
-        const id = updateId;
+        const id = updateLoopId;
         updateWorld((success) => {
-            if (id !== updateId) {
-                return
+            if (id !== updateLoopId) {
+                return;
             }
             if (!success) {
                 autoUpdate(false);
@@ -85,14 +86,12 @@
         });
     }
 
-    let timerId = null;
-
     function startAutoUpdateWithTimeout() {
-        const id = updateId
+        const id = updateLoopId;
         if (timerId === null) {
             timerId = setTimeout(() => {
-                if(id !== updateId) {
-                    return
+                if (id !== updateLoopId) {
+                    return;
                 }
                 timerId = null;
                 startAutoUpdateNow();
@@ -112,8 +111,16 @@
     function updateWorld(callback) {
         let success;
         fetch(WORLD_URL)
-            .then((response) => ((success = response.ok), response.text()))
-            .then((html) => (showWorld(html), callback && callback(success)));
+            .then((response) => {
+                success = response.ok;
+                return response.text();
+            })
+            .then((html) => {
+                showWorld(html);
+                if (callback) {
+                    callback(success);
+                }
+            });
     }
 
     function showWorld(html) {
@@ -142,7 +149,4 @@
         }
     }
 
-    // ------------------------------------------------------------------------
-
-    init();
 })();

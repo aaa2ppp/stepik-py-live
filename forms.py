@@ -6,6 +6,7 @@ WORLD_MIN_SIZE = 2
 WORLD_MAX_SIZE = 100
 WORLD_DEFAULT_SIZE = 20
 
+
 class WorldSizeForm(FlaskForm):
     __default_height = WORLD_DEFAULT_SIZE
     __default_width = WORLD_DEFAULT_SIZE
@@ -42,4 +43,3 @@ class WorldSizeForm(FlaskForm):
             WorldSizeForm.__default_height = self.height.data
             WorldSizeForm.__default_width = self.width.data
         return result
-
