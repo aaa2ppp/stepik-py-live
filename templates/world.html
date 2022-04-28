@@ -1,11 +1,12 @@
-<div id="hiddenCounter" class="hidden">{{ life.generation }}</div>
+<div id="hiddenCounter" class="hidden">{{ cells.serial }}</div>
+<div id="hiddenCounter" class="hidden">{{ cells.__class__.__name__ }}</div>
 <table class="world" style="font-family: monospace;">
-    {% for row in range(0, life.height) %}
+    {% for row in range(0, cells.height) %}
     <tr>
-        {% for col in range(0, life.width) %}
-            {% if life.cell_is_alive(row, col) %}
+        {% for col in range(0, cells.width) %}
+            {% if cells.is_live_cell(row, col) %}
                 <td class="cell living-cell">X</td>
-            {% elif life.cell_was_alive(row, col) %}
+            {% elif cells.is_dead_cell(row, col) %}
                 <td class="cell dead-cell">D</td>
             {% else %}
                 <td class="cell">_</td>

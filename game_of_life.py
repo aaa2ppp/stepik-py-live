@@ -1,68 +1,65 @@
 import random
-import uuid
 from functools import reduce
 from operator import add
 from threading import Lock
+from typing import Optional
 
-import flask
 
+class GameOfLiveRules:
+    # [https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life#Rules}
+    # 1. Any live cell with two or three live neighbours survives.
+    # 2. Any dead cell with three live neighbours becomes a live cell.
+    # 3. All other live cells die in the next generation. Similarly, all other dead cells stay dead.
 
-class RulesOfLife:
     _neighbors_coords = ((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1))
 
     @classmethod
-    def cell_will_live(cls, life, row: int, col: int) -> bool:
-        count = cls.count_neighbors(life, row, col)
+    def is_live_cell(cls, previous: 'CellGeneration', row: int, col: int) -> bool:
+        number_of_neighbors = cls.count_neighbors(previous, row, col)
 
-        if life.cell_is_alive(row, col):
-            return count in (2, 3)
+        if previous.is_live_cell(row, col):
+            return number_of_neighbors in (2, 3)
         else:
-            return count == 3
+            return number_of_neighbors == 3
 
     @classmethod
-    def count_neighbors(cls, life, row: int, col: int) -> int:
+    def count_neighbors(cls, previous: 'CellGeneration', row: int, col: int) -> int:
         vertical = 0
         horizontal = 1
-        height = life.height
-        width = life.width
+        height = previous.height
+        width = previous.width
 
-        def neighbor_is_alive(offset):
-            return life.cell_is_alive((row + offset[vertical]) % height, (col + offset[horizontal]) % width)
+        def is_live_neighbor(offset):
+            return previous.is_live_cell((row + offset[vertical]) % height, (col + offset[horizontal]) % width)
 
-        return reduce(add, map(neighbor_is_alive, cls._neighbors_coords), 0)
+        return reduce(add, map(is_live_neighbor, cls._neighbors_coords), 0)
 
 
-class LifeGeneration:
+class CellGeneration:
+    def __init__(self, height: int, width: int, serial: int = 0):
+        self._serial = serial
+        self._width = width
+        self._height = height
+        self._world = self._create_new_word()
 
-    def __init__(self, parent=None, height: int = 20, width: int = 20):
-        self._parent = parent
+    def _create_new_word(self):
+        return tuple(
+            tuple(self._get_new_cell_state(row, col) for col in range(self._width))
+            for row in range(self._height)
+        )
 
-        if parent is None:
-            self._serial = 0
-            self._width = width
-            self._height = height
-            self._world = tuple(
-                tuple(bool(random.randint(0, 1)) for _ in range(self._width)) for _ in range(self._height)
-            )
-        else:
-            parent._parent = None
-            self._serial = parent._serial + 1
-            self._height = parent._height
-            self._width = parent._width
-            self._world = tuple(
-                tuple(RulesOfLife.cell_will_live(parent, row, col) for col in range(self._width))
-                for row in range(self._height)
-            )
+    def _get_new_cell_state(self, row: int, col: int) -> bool:
+        return False
 
-    # TODO: I don't like the name generation and I don't like the name serial!
-    #  serial_number, ordinal_number, sequence_number? hmm?.. two word - imho too long...
+    # TODO: I don't like the name 'serial' here!
+    #  serial_number, ordinal_number, sequence_number... hmm?.. too ugly and too long...
     @property
-    def generation(self) -> int:
+    def serial(self) -> int:
         return self._serial
 
     @property
-    def parent(self):
-        return self._parent
+    def previous(self) -> Optional['CellGeneration']:
+        return None
 
     @property
     def width(self) -> int:
@@ -72,65 +69,94 @@ class LifeGeneration:
     def height(self) -> int:
         return self._height
 
-    def cell_is_alive(self, row: int, col: int) -> bool:
+    def is_live_cell(self, row: int, col: int) -> bool:
         return self._world[row][col]
 
-    def cell_was_alive(self, row: int, col: int) -> bool:
-        parent = self._parent
-        return parent and parent.cell_is_alive(row, col)
+    def is_dead_cell(self, row: int, col: int) -> bool:
+        previous = self.previous
+        return previous and previous.is_live_cell(row, col)
+
+    def forget_previous(self) -> None:
+        pass
 
 
-# class SingletonMeta(type):
-#     _instances = {}
-#     _lock: Lock = Lock()
-#
-#     def _call_(cls, *args, **kwargs):
-#         with cls._lock:
-#             # XXX: It's not a Singleton!!! Adding `or args or kwargs' breaks the whole idea!
-#             if cls not in cls._instances or args or kwargs:
-#                 instance = super()._call_(*args, **kwargs)
-#                 cls._instances[cls] = instance
-#         return cls._instances[cls]
+class RandomCellGeneration(CellGeneration):
+    def _get_new_cell_state(self, row: int, col: int) -> bool:
+        return bool(random.randint(0, 1))
 
 
-# Another question: "Why is the singleton here?!"
-# The instance of GameOfLife must be stored in the session and die with it!
+class NextCellGeneration(CellGeneration):
+    def __init__(self, previous: CellGeneration):
+        # The important thing here is to call the superclass initialization after assigning the value to `previous'
+        self._previous = previous
+        super().__init__(previous.height, previous.width, serial=previous.serial + 1)
+
+    @property
+    def previous(self) -> CellGeneration:
+        return self._previous
+
+    def _get_new_cell_state(self, row: int, col: int) -> bool:
+        return GameOfLiveRules.is_live_cell(self._previous, row, col)
+
+    def forget_previous(self) -> None:
+        self._previous = None
+
 
 # TODO:
-#  I haven't thought it through yet. The game must be linked to the session. The game must be in one copy per session.
-#  There must be a mechanism that removes all data associated with a user-terminated or outdated session from memory.
-#  We need a separate class for this task. Or find a ready-made solution. But the bicycle  is more interesting.
+#  Another question: "Why is the singleton here?!"
+#  The 'GameOfLife' instance should be unique for the session, not for the application as a whole.
+#  I haven't thought it through yet...
+#    The game must be associated with a user session.
+#    The game must be in one copy per session.
+#    The game should be removed from memory when the session ends.
+#    The session is terminated by the user or by the user's client activity timeout.
+#  We need a new separate class for this task or a ready-made third-party solution.
+#  But the bicycle is more interesting ;)
 
-class _DummyMeta(type):
-    _instances = {}
-    _lock: Lock = Lock()
-    _uuid = '87fcf5d2-5391-467b-81c1-22e7989d5a35'
+class SingletonMeta(type):
+
+    def __init__(cls, *args, **kwargs):
+        super(SingletonMeta, cls).__init__(*args, **kwargs)
+        cls._instance = None
+        cls._lock = Lock()
 
     def __call__(cls, *args, **kwargs):
         with cls._lock:
-            session_id = flask.session.get(cls._uuid)
-            if session_id is None:
-                session_id = uuid.uuid4()
-                flask.session[cls._uuid] = session_id
-
-            instance = cls._instances.get(session_id)
-            if instance is None or args or kwargs:
-                instance = super().__call__(*args, **kwargs)
-                cls._instances[session_id] = instance
-
+            instance = cls._instance
+            if instance is None:
+                instance = super(SingletonMeta, cls).__call__(*args, **kwargs)
+                cls._instance = instance
         return instance
 
 
-class GameOfLife(metaclass=_DummyMeta):
+class NoCellGeneration(Exception):
+    pass
 
-    def __init__(self, width=20, height=20):
+
+class GameOfLife(metaclass=SingletonMeta):
+    def __init__(self):
+        self._cell_generation = None
+        self._is_new_life = False
+
+    def __enter__(self):
+        self._lock.acquire()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._lock.release()
+
+    def create_new_life(self, width=20, height=20) -> None:
+        self._cell_generation = RandomCellGeneration(width, height)
         self._is_new_life = True
-        self._generation = LifeGeneration(width=width, height=height)
 
-    def create_next_generation(self):
+    def get_next_generation(self) -> CellGeneration:
+        if self._cell_generation is None:
+            raise NoCellGeneration("Maybe you forgot to call 'create_new_life' before")
+
         if self._is_new_life:
             self._is_new_life = False
         else:
-            self._generation = LifeGeneration(parent=self._generation)
+            self._cell_generation.forget_previous()
+            self._cell_generation = NextCellGeneration(self._cell_generation)
 
-        return self._generation
+        return self._cell_generation

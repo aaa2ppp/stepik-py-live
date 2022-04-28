@@ -6,47 +6,45 @@ from forms import WorldSizeForm
 app = Flask(__name__)
 
 app.config["TEMPLATES_AUTO_RELOAD"] = True
-app.config["SECRET_KEY"] = "R2Gl3QGoPnqDth4N"
+app.config["SECRET_KEY"] = b'TIq2mUesnvuk/c9CdnZ/B+4guM+u/PkoKs27NNDxZ8I'
 
 
 @app.route("/", methods=["GET", "POST"])
 def index():
     form = WorldSizeForm()
-
     if request.method == "POST" and form.validate_on_submit():
-        GameOfLife(
-            height=form.height.data,
-            width=form.width.data
-        )
+        with GameOfLife() as game:
+            game.create_new_life(height=form.height.data, width=form.width.data)
         return redirect(url_for("live", autoUpdate="on"))
-
     else:
         return render_template("index.html", form=form)
 
 
 @app.route("/live")
 def live():
-    life = GameOfLife().create_next_generation()
-    return render_template("live.html", life=life)
+    with GameOfLife() as game:
+        return render_template("live.html", cells=game.get_next_generation())
 
 
 @app.route("/world")
 def world():
-    life = GameOfLife().create_next_generation()
-    return render_template("world.html", life=life)
+    with GameOfLife() as game:
+        return render_template("world.html", cells=game.get_next_generation())
 
 
 # The following two direct links are FOR TESTS ONLY
 
 @app.route("/new-live")
 def new_live():
-    GameOfLife(height=20, width=20)
+    with GameOfLife() as game:
+        game.create_new_life()
     return redirect(url_for("live"))
 
 
 @app.route("/new-world")
 def new_world():
-    GameOfLife(height=20, width=20)
+    with GameOfLife() as game:
+        game.create_new_life()
     return redirect(url_for("world"))
 
 
