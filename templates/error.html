@@ -6,7 +6,13 @@
     <title>Error</title>
 </head>
 <body>
-    <h1>Error {{ code }}</h1>
+    <h1>
+    {% if title %}
+        {{ title }}
+    {% else %}
+        Error
+    {% endif %}
+    </h1>
     <p>{{ message }}</p>
 </body>
 </html>

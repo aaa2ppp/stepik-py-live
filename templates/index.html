@@ -12,7 +12,7 @@
             </p>
         {% endfor %}
         <div style="font-size: small">
-            <p>Допустимые значения от 2 до 100</p>
+            <p>Допустимые значения от {{ form.min_size }} до {{ form.max_size }}</p>
         </div>
         <p>{{ form.submit(class_="btn btn-primary") }}</p>
     </form>

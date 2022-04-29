@@ -3,8 +3,6 @@ from functools import reduce
 from operator import add
 from typing import Optional
 
-from session import SessionService
-
 
 class GameOfLiveRules:
     """
@@ -91,6 +89,7 @@ class RandomCellGeneration(CellGeneration):
 
 class NextCellGeneration(CellGeneration):
     def __init__(self, previous: CellGeneration):
+
         # NOTE: The important thing here is to call the superclass initialization after
         # assigning the value to `previous'
         self._previous = previous
@@ -109,15 +108,11 @@ class NextCellGeneration(CellGeneration):
 
 class GameOfLifMeta(type):
 
-    def __init__(cls, *args, **kwargs):
-        super(GameOfLifMeta, cls).__init__(*args, **kwargs)
-
-    def __call__(cls, *args, **kwargs):
-        context_data = SessionService().get_session_context().data
-        instance = context_data.get(cls.__name__)
+    def __call__(cls, context: dict):
+        instance = context.get(cls)
         if instance is None:
-            instance = super(GameOfLifMeta, cls).__call__(*args, **kwargs)
-            context_data[cls.__name__] = instance
+            instance = super(GameOfLifMeta, cls).__call__()
+            context[cls] = instance
         return instance
 
 

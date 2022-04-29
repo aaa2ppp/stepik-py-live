@@ -1,23 +1,37 @@
-from flask import redirect
+from flask import redirect, request
 from flask.helpers import url_for
 from functools import wraps
 
 from session import SessionService
 
 
-def authorization_required(f):
-    """
-    Decorate routes to require authorization
+# def login_required(f):
+#     """
+#     Decorate routes to require login.
+#
+#     http://flask.pocoo.org/docs/0.12/patterns/viewdecorators/
+#     """
+#     @wraps(f)
+#     def decorated_function(*args, **kwargs):
+#         if session.get("user_id") is None:
+#             return redirect("/login")
+#         return f(*args, **kwargs)
+#     return decorated_function
 
-    https://flask.palletsprojects.com/en/1.1.x/patterns/viewdecorators/
+
+def open_session(f):
+    """
+    Decorator to open session and giving the session context data to wrapped function.
     """
 
     @wraps(f)
     def decorated_function(*args, **kwargs):
         session_service = SessionService()
-        if session_service.get_session_key():
-            return f(*args, **kwargs)
+        if session_service.has_session():
+            with session_service.get_session_context() as context:
+                return f(context.data, *args, **kwargs)
         else:
-            session_service.create_new_session_key()
-            return redirect(url_for("authorization"))
+            session_service.create_new_session()
+            return redirect(url_for("check_session", next=request.url))
+
     return decorated_function

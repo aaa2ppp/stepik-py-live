@@ -2,27 +2,32 @@ from wtforms import IntegerField, SubmitField
 from wtforms.validators import InputRequired, NumberRange
 from flask_wtf import FlaskForm
 
-WORLD_MIN_SIZE = 2
+WORLD_MIN_SIZE = 3
 WORLD_MAX_SIZE = 100
 WORLD_DEFAULT_SIZE = 20
 
 
 class WorldSizeForm(FlaskForm):
-    # TODO: Need use saved successful input as default values
+    # TODO: we should use successful input as future defaults
 
-    _default_height = 'WorldSizeForm.default_height'
-    _default_width = 'WorldSizeForm.default_width'
+    @property
+    def min_size(self):
+        return WORLD_MIN_SIZE
+
+    @property
+    def max_size(self):
+        return WORLD_MAX_SIZE
 
     def __init__(self, context_data: dict):
         super().__init__()
-        self._context_data = context_data
+        self._context_data = context_data.setdefault(self.__class__, {})
 
     def validate_on_submit(self):
         result = super().validate_on_submit()
 
         if result:
-            self._context_data[self._default_height] = self.height.data
-            self._context_data[self._default_width] = self.width.data
+            self._context_data['default_height'] = self.height.data
+            self._context_data['default_width'] = self.width.data
 
         return result
 

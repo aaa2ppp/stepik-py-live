@@ -2,7 +2,6 @@
 
 (function () {
     const UPDATE_TIMEOUT = 1000;
-    const PARAM_NAME = "autoUpdate"
     const WORLD_URL = '/world';
     const WORLD_CONTAINER_ID = 'worldContainer';
     const HIDDEN_COUNTER_ID = 'hiddenCounter';
@@ -55,15 +54,15 @@
     // usage: [oldValue =] autoUpdate([newValue]);
     function autoUpdate(value) {
         const url = new URL(location);
-        const oldValue = url.searchParams.has(PARAM_NAME);
+        const oldValue = url.searchParams.has('autoUpdate');
 
         if (value !== undefined && value !== oldValue) {
             updateLoopId++;
             if (value) {
-                url.searchParams.set(PARAM_NAME, 'on');
+                url.searchParams.set('autoUpdate', 'on');
                 startAutoUpdateNow();
             } else {
-                url.searchParams.delete(PARAM_NAME);
+                url.searchParams.delete('autoUpdate');
                 stopAutoUpdate();
             }
             history.replaceState(null, null, url);
@@ -74,16 +73,28 @@
     }
 
     function startAutoUpdateNow() {
-        if (timerId === null) {
-            setTimeout(async () => await updateWorld(), 0);
-            startAutoUpdateWithTimeout()
-        }
+        const id = updateLoopId;
+        updateWorld((success) => {
+            if (id !== updateLoopId) {
+                return;
+            }
+            if (!success) {
+                autoUpdate(false);
+            } else {
+                startAutoUpdateWithTimeout();
+            }
+        });
     }
 
     function startAutoUpdateWithTimeout() {
+        const id = updateLoopId;
         if (timerId === null) {
-            timerId = setInterval(async () => {
-                await updateWorld((susses) => susses || stopAutoUpdate())
+            timerId = setTimeout(() => {
+                if (id !== updateLoopId) {
+                    return;
+                }
+                timerId = null;
+                startAutoUpdateNow();
             }, UPDATE_TIMEOUT);
         }
     }
@@ -97,15 +108,23 @@
 
     // ------------------------------------------------------------------------
 
-    async function updateWorld(callback) {
-        const response = await fetch(WORLD_URL);
-        const html_text = await response.text();
-        showWorld(html_text);
-        callback && callback(response.ok);
+    function updateWorld(callback) {
+        let success;
+        fetch(WORLD_URL)
+            .then((response) => {
+                success = response.ok;
+                return response.text();
+            })
+            .then((html) => {
+                showWorld(html);
+                if (callback) {
+                    callback(success);
+                }
+            });
     }
 
-    function showWorld(html_text) {
-        worldContainer.innerHTML = html_text;
+    function showWorld(html) {
+        worldContainer.innerHTML = html;
         if (counter) {
             const hiddenCounter = document.getElementById(HIDDEN_COUNTER_ID);
             if (hiddenCounter) {

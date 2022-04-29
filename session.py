@@ -3,21 +3,7 @@ from threading import Lock
 from flask import redirect, session
 from typing import Optional
 
-
-class SingletonMeta(type):
-
-    def __init__(cls, *args, **kwargs):
-        super(SingletonMeta, cls).__init__(*args, **kwargs)
-        cls._instance = None
-        cls._lock = Lock()
-
-    def __call__(cls, *args, **kwargs):
-        with cls._lock:
-            instance = cls._instance
-            if instance is None:
-                instance = super(SingletonMeta, cls).__call__(*args, **kwargs)
-                cls._instance = instance
-        return instance
+from singleton import SingletonMeta
 
 
 class ErrorAuthorizationRequired(Exception):
@@ -25,7 +11,7 @@ class ErrorAuthorizationRequired(Exception):
 
 
 class SessionService(metaclass=SingletonMeta):
-    _ss_key = "ss_key"
+    _ss_key = "xG4chG9PdKExwbGmR4"
 
     def __init__(self):
         self._contexts = {}
@@ -35,7 +21,11 @@ class SessionService(metaclass=SingletonMeta):
         return session.get(cls._ss_key)
 
     @classmethod
-    def create_new_session_key(cls) -> str:
+    def has_session(cls) -> Optional[str]:
+        return cls.get_session_key() is not None
+
+    @classmethod
+    def create_new_session(cls) -> str:
         key = str(uuid4())
         session[cls._ss_key] = key
         return key
@@ -59,35 +49,36 @@ class SessionService(metaclass=SingletonMeta):
 
 class SessionContext:
     """
-    External code MUST use `with' for safety use instance of `SessionContext' class in multithreading environment.
+    To obtain an instance of the SessionContext, you SHOULD use the get_session_context method of the
+    SessionService object. You MUST always use `with' to ensure thread safety.
 
     with SessionService().get_session_context() as context:
-        # get data for context
+        # get data from context
         foo = context.data['foo']
-        bar = context.data['bar']
-        baz = context.data['baz']
 
         # make some data changes
         ...
 
         # save data to context
         context.data['foo'] = foo
-        context.data['bar'] = bar
-        context.data['baz'] = baz
     """
 
     def __init__(self):
         self._data = {}
         self._lock = Lock()
 
-    @property
-    def data(self):
-        return self._data
-
     def __enter__(self):
         self._lock.acquire()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self._lock.release()
+        if self._lock.locked():
+            self._lock.release()
 
+    @property
+    def data(self) -> dict:
+        return self._data
+
+    @property
+    def lock(self) -> Lock:
+        return self._lock
