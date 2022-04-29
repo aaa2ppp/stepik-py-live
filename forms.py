@@ -8,21 +8,27 @@ WORLD_DEFAULT_SIZE = 20
 
 
 class WorldSizeForm(FlaskForm):
-    # TODO: We can't store it here. This is data must be linked to the session.
-    _default_height = WORLD_DEFAULT_SIZE
-    _default_width = WORLD_DEFAULT_SIZE
+    # TODO: Need use saved successful input as default values
 
-    @staticmethod
-    def default_height():
-        return WorldSizeForm._default_height
+    _default_height = 'WorldSizeForm.default_height'
+    _default_width = 'WorldSizeForm.default_width'
 
-    @staticmethod
-    def default_width():
-        return WorldSizeForm._default_width
+    def __init__(self, context_data: dict):
+        super().__init__()
+        self._context_data = context_data
+
+    def validate_on_submit(self):
+        result = super().validate_on_submit()
+
+        if result:
+            self._context_data[self._default_height] = self.height.data
+            self._context_data[self._default_width] = self.width.data
+
+        return result
 
     height = IntegerField(
         "Высота мира",
-        default=default_height,
+        default=WORLD_DEFAULT_SIZE,
         validators=[
             InputRequired(),
             NumberRange(WORLD_MIN_SIZE, WORLD_MAX_SIZE)
@@ -31,7 +37,7 @@ class WorldSizeForm(FlaskForm):
 
     width = IntegerField(
         "Ширина мира",
-        default=default_width,
+        default=WORLD_DEFAULT_SIZE,
         validators=[
             InputRequired(),
             NumberRange(WORLD_MIN_SIZE, WORLD_MAX_SIZE)
@@ -40,10 +46,3 @@ class WorldSizeForm(FlaskForm):
 
     submit = SubmitField("Создать жизнь")
 
-    def validate_on_submit(self):
-        result = super().validate_on_submit()
-        if result:
-            # TODO: see above
-            WorldSizeForm._default_height = self.height.data
-            WorldSizeForm._default_width = self.width.data
-        return result

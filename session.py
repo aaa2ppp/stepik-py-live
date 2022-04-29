@@ -1,32 +1,93 @@
+from uuid import uuid4
 from threading import Lock
-from typing import Dict
+from flask import redirect, session
+from typing import Optional
 
-import flask
+
+class SingletonMeta(type):
+
+    def __init__(cls, *args, **kwargs):
+        super(SingletonMeta, cls).__init__(*args, **kwargs)
+        cls._instance = None
+        cls._lock = Lock()
+
+    def __call__(cls, *args, **kwargs):
+        with cls._lock:
+            instance = cls._instance
+            if instance is None:
+                instance = super(SingletonMeta, cls).__call__(*args, **kwargs)
+                cls._instance = instance
+        return instance
 
 
-class ServerSideSession:
-    _lock = Lock()
-    _flask_session_key = 'ee189389-a72c-4225-a44e-e7c02f7ae222'
-    _data = {}
+class ErrorAuthorizationRequired(Exception):
+    pass
+
+
+class SessionService(metaclass=SingletonMeta):
+    _ss_key = "ss_key"
+
+    def __init__(self):
+        self._contexts = {}
 
     @classmethod
-    def lock(cls) -> Lock:
-        return cls._lock
+    def get_session_key(cls) -> Optional[str]:
+        return session.get(cls._ss_key)
 
     @classmethod
-    def get_session_date(cls) -> Dict:
-        key = flask.session.get(cls._flask_session_key)
-        data = cls._data.get(key)
-        if data is None:
-            data = {}
-            cls._data[key] = data
-        return cls._data
+    def create_new_session_key(cls) -> str:
+        key = str(uuid4())
+        session[cls._ss_key] = key
+        return key
+
+    def get_session_context(self) -> 'SessionContext':
+        key = self.get_session_key()
+        if key is None:
+            raise ErrorAuthorizationRequired("Can't get session key")
+
+        self._lock.acquire()
+
+        session_context = self._contexts.get(key)
+        if session_context is None:
+            session_context = SessionContext()
+            self._contexts[key] = session_context
+
+        self._lock.release()
+
+        return session_context
 
 
-def server_session(func):
-    def _wrapper(*args, **kwargs):
-        with ServerSideSession.lock():
-            session_data = ServerSideSession.get_session_date()
-            func(*args, **kwargs)
+class SessionContext:
+    """
+    External code MUST use `with' for safety use instance of `SessionContext' class in multithreading environment.
 
-    return _wrapper()
+    with SessionService().get_session_context() as context:
+        # get data for context
+        foo = context.data['foo']
+        bar = context.data['bar']
+        baz = context.data['baz']
+
+        # make some data changes
+        ...
+
+        # save data to context
+        context.data['foo'] = foo
+        context.data['bar'] = bar
+        context.data['baz'] = baz
+    """
+
+    def __init__(self):
+        self._data = {}
+        self._lock = Lock()
+
+    @property
+    def data(self):
+        return self._data
+
+    def __enter__(self):
+        self._lock.acquire()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._lock.release()
+

@@ -1,9 +1,9 @@
-<div id="hiddenCounter" class="hidden">{{ cells.serial }}</div>
+<div id="hiddenCounter" class="hidden">{{ cells.ordinal }}</div>
 <div id="hiddenCounter" class="hidden">{{ cells.__class__.__name__ }}</div>
 <table class="world" style="font-family: monospace;">
-    {% for row in range(0, cells.height) %}
+    {% for row in range(0, cells.world_height) %}
     <tr>
-        {% for col in range(0, cells.width) %}
+        {% for col in range(0, cells.world_width) %}
             {% if cells.is_live_cell(row, col) %}
                 <td class="cell living-cell">X</td>
             {% elif cells.is_dead_cell(row, col) %}
