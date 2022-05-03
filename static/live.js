@@ -14,8 +14,8 @@
     let worldContainer;
     let counter;
     let refreshButton;
-    let updateLoopId = 0;
-    let timerId = null;
+    let _autoUpdate = false;
+    let currentUpdateLoopId = 0;
     init();
 
     // ------------------------------------------------------------------------
@@ -42,8 +42,11 @@
             console.warn(`Element with id='${REFRESH_BUTTON_ID}' was not found on the page`);
         }
 
-        if (autoUpdate()) {
-            startAutoUpdateWithTimeout();
+        const url = new URL(location);
+        _autoUpdate = url.searchParams.has(PARAM_NAME);
+
+        if (_autoUpdate) {
+            startAutoUpdateWithTimeout(currentUpdateLoopId);
         }
 
         refreshButton?.addEventListener('click', refreshButtonClick);
@@ -52,56 +55,58 @@
 
     // ------------------------------------------------------------------------
 
-    // usage: [oldValue =] autoUpdate([newValue]);
+    // Usage: [oldValue =] autoUpdate([newValue]);
     function autoUpdate(value) {
-        const url = new URL(location);
-        const oldValue = url.searchParams.has(PARAM_NAME);
+        const oldValue = _autoUpdate;
 
         if (value !== undefined && value !== oldValue) {
-            updateLoopId++;
+            _autoUpdate = value;
+
             if (value) {
-                url.searchParams.set(PARAM_NAME, 'on');
                 startAutoUpdateNow();
             } else {
-                url.searchParams.delete(PARAM_NAME);
                 stopAutoUpdate();
             }
-            history.replaceState(null, null, url);
+
             updateRefreshButtonLabel();
+            updateUrl();
         }
 
         return oldValue;
     }
 
+    // ------------------------------------------------------------------------
+
     function startAutoUpdateNow() {
-        if (timerId === null) {
-            setTimeout(async () => await updateWorld(), 0);
-            startAutoUpdateWithTimeout()
-        }
+        currentUpdateLoopId++;
+        autoUpdateLoop(currentUpdateLoopId).then();
     }
 
     function startAutoUpdateWithTimeout() {
-        if (timerId === null) {
-            timerId = setInterval(async () => {
-                await updateWorld((susses) => susses || stopAutoUpdate())
-            }, UPDATE_TIMEOUT);
-        }
+        currentUpdateLoopId++;
+        setTimeout(() => autoUpdateLoop(currentUpdateLoopId), UPDATE_TIMEOUT);
     }
 
     function stopAutoUpdate() {
-        if (timerId !== null) {
-            clearTimeout(timerId);
-            timerId = null;
+        currentUpdateLoopId++;
+    }
+
+    async function autoUpdateLoop(updateLoopId) {
+        let startTime = Date.now();
+        while (updateLoopId === currentUpdateLoopId && await updateWorld()) {
+            const endTime = Date.now();
+            const timeout = Math.max(UPDATE_TIMEOUT - (endTime - startTime), 0);
+            startTime = endTime + timeout;
+            await new Promise(f => setTimeout(f, timeout));
         }
     }
 
     // ------------------------------------------------------------------------
 
-    async function updateWorld(callback) {
+    async function updateWorld() {
         const response = await fetch(WORLD_URL);
-        const html_text = await response.text();
-        showWorld(html_text);
-        callback && callback(response.ok);
+        setTimeout(async () => showWorld(await response.text()), 0);
+        return response.ok;
     }
 
     function showWorld(html_text) {
@@ -122,12 +127,27 @@
     function refreshButtonClick(event) {
         autoUpdate(!autoUpdate());
         event.preventDefault();
+        event.currentTarget.blur();
     }
 
     function updateRefreshButtonLabel() {
         if (refreshButton) {
             refreshButton.textContent = autoUpdate() ? STOP_LABEL : CONTINUE_LABEL;
         }
+    }
+
+    // ------------------------------------------------------------------------
+
+    function updateUrl() {
+        const url = new URL(location);
+
+        if (autoUpdate()) {
+            url.searchParams.set(PARAM_NAME, 'on');
+        } else {
+            url.searchParams.delete(PARAM_NAME);
+        }
+
+        history.replaceState(null, null, url);
     }
 
 })();

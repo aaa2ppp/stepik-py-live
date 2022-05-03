@@ -3,6 +3,9 @@ from functools import reduce
 from operator import add
 from typing import Optional
 
+from bitarray import makeBitArray, setBit, testBit
+from session import SessionContext
+
 
 class GameOfLiveRules:
     """
@@ -25,119 +28,120 @@ class GameOfLiveRules:
             return number_of_neighbors == 3
 
     @classmethod
-    def count_neighbors(cls, previous_generation: 'CellGeneration', row: int, col: int) -> int:
-        vertical = 0
-        horizontal = 1
-        height = previous_generation.world_height
-        width = previous_generation.world_width
+    def count_neighbors(cls, generation: 'CellGeneration', row: int, col: int) -> int:
+        height = generation.height
+        width = generation.width
 
         def is_live_neighbor(offset):
-            return previous_generation.is_live_cell(
-                (row + offset[vertical]) % height,
-                (col + offset[horizontal]) % width)
+            return generation.is_live_cell(
+                (row + offset[0]) % height,
+                (col + offset[1]) % width)
 
         return reduce(add, map(is_live_neighbor, cls._neighbors_coords), 0)
 
 
 class CellGeneration:
-    def __init__(self, height: int, width: int, ordinal: int = 0):
-        self._ordinal = ordinal
+    def __init__(self, height: int, width: int, previous: Optional['CellGeneration'] = None, serial: int = 0):
         self._width = width
         self._height = height
-        self._world = self._create_new_word()
-
-    def _create_new_word(self):
-        return tuple(
-            tuple(self._get_new_cell_state(row, col) for col in range(self._width))
-            for row in range(self._height)
-        )
-
-    def _get_new_cell_state(self, row: int, col: int) -> bool:
-        return False
+        self._previous = previous
+        self._serial = serial
+        self._world = self._create_world(height, width)
 
     @property
-    def ordinal(self) -> int:
-        return self._ordinal
-
-    @property
-    def previous_generation(self) -> Optional['CellGeneration']:
-        return None
-
-    @property
-    def world_height(self) -> int:
+    def height(self) -> int:
         return self._height
 
     @property
-    def world_width(self) -> int:
+    def width(self) -> int:
         return self._width
 
+    @property
+    def previous(self) -> 'CellGeneration':
+        return self._previous
+
+    @property
+    def serial(self) -> int:
+        return self._serial
+
+    def _calc_cell_state(self, row, col) -> bool:
+        """
+        Descendants must override this method
+        """
+        return False
+
+    # TODO: `BitArray` is in place here
+    # def _create_world(self, height, width):
+    #     return tuple(tuple(self._calc_cell_state(row, col) for col in range(width)) for row in range(height))
+    #
+    # def is_live_cell(self, row: int, col: int) -> bool:
+    #     return self._world[row][col]
+
+    def _create_world(self, height, width):
+        world = makeBitArray(height * width)
+        i = 0
+        for row in range(height):
+            for col in range(width):
+                if self._calc_cell_state(row, col):
+                    setBit(world, i)
+                i += 1
+        return world
+
     def is_live_cell(self, row: int, col: int) -> bool:
-        return self._world[row][col]
+        return testBit(self._world, row * self._width + col) != 0
 
     def is_dead_cell(self, row: int, col: int) -> bool:
-        previous = self.previous_generation
-        return previous and previous.is_live_cell(row, col)
+        if self._previous:
+            return not self.is_live_cell(row, col) and self._previous.is_live_cell(row, col)
+        else:
+            return False
 
-    def forget_previous_generations(self) -> None:
-        pass
+    def forget_previous(self):
+        self._previous = None
 
 
 class RandomCellGeneration(CellGeneration):
-    def _get_new_cell_state(self, row: int, col: int) -> bool:
-        return bool(randint(0, 1))
+    def _calc_cell_state(self, row, col):
+        return randint(0, 1)
 
 
 class NextCellGeneration(CellGeneration):
     def __init__(self, previous: CellGeneration):
+        super().__init__(previous.height, previous.width, previous=previous, serial=previous.serial + 1)
 
-        # NOTE: The important thing here is to call the superclass initialization after
-        # assigning the value to `previous'
-        self._previous = previous
-        super().__init__(previous.world_height, previous.world_width, ordinal=previous.ordinal + 1)
-
-    @property
-    def previous_generation(self) -> CellGeneration:
-        return self._previous
-
-    def _get_new_cell_state(self, row: int, col: int) -> bool:
+    def _calc_cell_state(self, row, col):
         return GameOfLiveRules.is_live_cell(self._previous, row, col)
 
-    def forget_previous_generations(self) -> None:
-        self._previous = None
 
-
-class GameOfLifMeta(type):
-
-    def __call__(cls, context: dict):
-        instance = context.get(cls)
-        if instance is None:
-            instance = super(GameOfLifMeta, cls).__call__()
-            context[cls] = instance
-        return instance
-
-
-class ErrorNoCellGeneration(Exception):
+class NoCellGenerationError(Exception):
     pass
 
 
-class GameOfLife(metaclass=GameOfLifMeta):
+class GameOfLifeMeta(type):
+    def __call__(cls, context: SessionContext):
+        instance = context.data.get(cls)
+        if instance is None:
+            context.data[cls] = instance = super(GameOfLifeMeta, cls).__call__()
+        return instance
 
+
+class GameOfLife(metaclass=GameOfLifeMeta):
     def __init__(self):
         self._cell_generation = None
         self._is_new_life = False
 
-    def create_new_life(self, width=20, height=20) -> None:
-        self._cell_generation = RandomCellGeneration(width, height)
+    def create_new_life(self, height: int, width: int) -> None:
+        self._cell_generation = RandomCellGeneration(height, width)
         self._is_new_life = True
 
     def get_next_generation(self) -> CellGeneration:
         if self._cell_generation is None:
-            raise ErrorNoCellGeneration("Maybe you forgot to call 'create_new_life' before")
+            raise NoCellGenerationError("Maybe you forgot to call 'create_new_life' before")
 
         if self._is_new_life:
             self._is_new_life = False
         else:
-            self._cell_generation.forget_previous_generations()
+            self._cell_generation.forget_previous()
             self._cell_generation = NextCellGeneration(self._cell_generation)
 
         return self._cell_generation

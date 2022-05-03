@@ -1,10 +1,11 @@
+from functools import wraps
+
 from flask import Flask, render_template, request, redirect
 from flask.helpers import url_for
-from game_of_life import GameOfLife, ErrorNoCellGeneration
 from forms import WorldSizeForm
 
+from game_of_life import GameOfLife, NoCellGenerationError
 from session import SessionService
-from helpers import open_session
 
 app = Flask(__name__)
 
@@ -12,6 +13,7 @@ app.config["TEMPLATES_AUTO_RELOAD"] = True
 app.config["SECRET_KEY"] = b'TIq2mUesnvuk/c9CdnZ/B+4guM+u/PkoKs27NNDxZ8I'
 
 
+# Tell browser to don't cache anything
 # @app.after_request
 # def after_request(response):
 #     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
@@ -20,13 +22,33 @@ app.config["SECRET_KEY"] = b'TIq2mUesnvuk/c9CdnZ/B+4guM+u/PkoKs27NNDxZ8I'
 #     return response
 
 
+def open_session(f):
+    """
+    Decorator to create session and giving the session context to wrapped function.
+
+    http://flask.pocoo.org/docs/0.12/patterns/viewdecorators/
+    """
+
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        session_service = SessionService()
+        if session_service.has_session():
+            with session_service.get_session_context() as context:
+                return f(context, *args, **kwargs)
+        else:
+            session_service.create_session()
+            return redirect(url_for("check_session", next=request.url))
+
+    return decorated_function
+
+
 @app.route("/check-session")
 def check_session():
     if SessionService().has_session():
         return redirect(request.args.get('next', url_for("index")))
     else:
         code = 403
-        title = "Open session error"
+        title = "Create session error"
         message = "Can't create session. This usually happens if your browser blocks cookies."
         return render_template("error.html", title=title, message=message, code=code), code
 
@@ -42,20 +64,13 @@ def index(context):
         return render_template("index.html", form=form)
 
 
-def no_cell_generation_error_message():
-    code = 500
-    message = ("I'm sorry, but there was an error. There is no generation of cells." +
-               " Please create new life.")
-    return render_template("error.html", message=message, code=code), code
-
-
 @app.route("/live")
 @open_session
 def live(context):
     try:
         cells = GameOfLife(context).get_next_generation()
         return render_template("live.html", cells=cells)
-    except ErrorNoCellGeneration:
+    except NoCellGenerationError:
         return no_cell_generation_error_message()
 
 
@@ -65,8 +80,15 @@ def world(context):
     try:
         cells = GameOfLife(context).get_next_generation()
         return render_template("world.html", cells=cells)
-    except ErrorNoCellGeneration:
+    except NoCellGenerationError:
         return no_cell_generation_error_message()
+
+
+def no_cell_generation_error_message():
+    code = 500
+    message = ("I'm sorry, but there was an error. There is no generation of cells." +
+               " Please create new life.")
+    return render_template("error.html", message=message, code=code), code
 
 
 # The following two direct links are FOR TESTS ONLY
@@ -74,14 +96,14 @@ def world(context):
 @app.route("/new-live")
 @open_session
 def new_live(context):
-    GameOfLife(context).create_new_life()
+    GameOfLife(context).create_new_life(20, 20)
     return redirect(url_for("live"))
 
 
 @app.route("/new-world")
 @open_session
 def new_world(context):
-    GameOfLife(context).create_new_life()
+    GameOfLife(context).create_new_life(20, 20)
     return redirect(url_for("world"))
 
 

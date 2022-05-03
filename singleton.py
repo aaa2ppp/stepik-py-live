@@ -2,7 +2,6 @@ from threading import Lock
 
 
 class SingletonMeta(type):
-
     def __init__(cls, *args, **kwargs):
         super(SingletonMeta, cls).__init__(*args, **kwargs)
         cls._instance = None
@@ -10,8 +9,6 @@ class SingletonMeta(type):
 
     def __call__(cls, *args, **kwargs):
         with cls._lock:
-            instance = cls._instance
-            if instance is None:
-                instance = super(SingletonMeta, cls).__call__(*args, **kwargs)
-                cls._instance = instance
-        return instance
+            if cls._instance is None:
+                cls._instance = super(SingletonMeta, cls).__call__(*args, **kwargs)
+            return cls._instance
