@@ -1,17 +1,18 @@
 <div id="hiddenCounter" class="hidden">{{ cells.serial }}</div>
-<div id="hiddenCounter" class="hidden">{{ cells.__class__.__name__ }}</div>
+<div class="hidden">{{ cells.__class__.__name__ }}</div>
 <table class="world" style="font-family: monospace;">
+    {% set previous = cells.previous %}
     {% for row in range(0, cells.height) %}
-    <tr>
-        {% for col in range(0, cells.width) %}
-            {% if cells.is_live_cell(row, col) %}
-                <td class="cell living-cell">X</td>
-            {% elif cells.is_dead_cell(row, col) %}
-                <td class="cell dead-cell">D</td>
-            {% else %}
-                <td class="cell">_</td>
-            {% endif %}
-        {% endfor %}
-    </tr>
+        <tr>
+            {% for col in range(0, cells.width) %}
+                {% if cells.is_live_cell(row, col) %}
+                    <td class="cell living-cell">X</td>
+                {% elif previous and previous.is_live_cell(row, col) %}
+                    <td class="cell dead-cell">D</td>
+                {% else %}
+                    <td class="cell">_</td>
+                {% endif %}
+            {% endfor %}
+        </tr>
     {% endfor %}
 </table>

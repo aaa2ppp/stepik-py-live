@@ -3,7 +3,7 @@ from threading import Lock
 from flask import session as flask_session
 from typing import Optional
 
-from singleton import SingletonMeta
+from util.singleton import SingletonMeta
 
 
 class SessionContentError(Exception):

@@ -1,10 +1,11 @@
+import array
 from random import randint
 from functools import reduce
 from operator import add
 from typing import Optional
 
-from bitarray import makeBitArray, setBit, testBit
-from session import SessionContext
+from util.bitarray import makeBitArray, setBit, testBit
+from util.session import SessionContext
 
 
 class GameOfLiveRules:
@@ -13,7 +14,7 @@ class GameOfLiveRules:
     2. Any dead cell with three live neighbours becomes a live cell.
     3. All other live cells die in the next generation. Similarly, all other dead cells stay dead.
 
-    https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life#Rules}
+    https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life#Rules
     """
 
     _neighbors_coords = ((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1))
@@ -64,53 +65,44 @@ class CellGeneration:
     def serial(self) -> int:
         return self._serial
 
-    def _calc_cell_state(self, row, col) -> bool:
+    def _create_world(self, height, width):
         """
         Descendants must override this method
         """
-        return False
-
-    # TODO: `BitArray` is in place here
-    # def _create_world(self, height, width):
-    #     return tuple(tuple(self._calc_cell_state(row, col) for col in range(width)) for row in range(height))
-    #
-    # def is_live_cell(self, row: int, col: int) -> bool:
-    #     return self._world[row][col]
-
-    def _create_world(self, height, width):
-        world = makeBitArray(height * width)
-        i = 0
-        for row in range(height):
-            for col in range(width):
-                if self._calc_cell_state(row, col):
-                    setBit(world, i)
-                i += 1
-        return world
+        return makeBitArray(height * width)
 
     def is_live_cell(self, row: int, col: int) -> bool:
         return testBit(self._world, row * self._width + col) != 0
-
-    def is_dead_cell(self, row: int, col: int) -> bool:
-        if self._previous:
-            return not self.is_live_cell(row, col) and self._previous.is_live_cell(row, col)
-        else:
-            return False
 
     def forget_previous(self):
         self._previous = None
 
 
 class RandomCellGeneration(CellGeneration):
-    def _calc_cell_state(self, row, col):
-        return randint(0, 1)
+    def _create_world(self, height, width):
+        world = array.array('I')
+        size = (height * width + 31) >> 5
+        for i in range(size):
+            world.append(randint(0, 0xFFFFFFFF))
+        return world
 
 
 class NextCellGeneration(CellGeneration):
     def __init__(self, previous: CellGeneration):
         super().__init__(previous.height, previous.width, previous=previous, serial=previous.serial + 1)
 
-    def _calc_cell_state(self, row, col):
-        return GameOfLiveRules.is_live_cell(self._previous, row, col)
+    def _create_world(self, height, width):
+        prev = self.previous
+        is_live = GameOfLiveRules.is_live_cell
+        world = makeBitArray(height * width)
+
+        i = 0
+        for row in range(height):
+            for col in range(width):
+                if is_live(prev, row, col):
+                    setBit(world, i)
+                i += 1
+        return world
 
 
 class NoCellGenerationError(Exception):

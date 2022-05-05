@@ -2,7 +2,7 @@ from wtforms import IntegerField, SubmitField
 from wtforms.validators import InputRequired, NumberRange
 from flask_wtf import FlaskForm
 
-from session import SessionService, SessionContext
+from util.session import SessionService, SessionContext
 
 _WORLD_MIN_SIZE = 1
 _WORLD_MAX_SIZE = 100

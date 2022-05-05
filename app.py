@@ -1,17 +1,14 @@
-from functools import wraps
-
-from flask import Flask, render_template, request, redirect
-from flask.helpers import url_for
+from flask import Flask, render_template, request, redirect, url_for
 from forms import WorldSizeForm
 
 from game_of_life import GameOfLife, NoCellGenerationError
-from session import SessionService
+from helpers import html_prettify, html_minify, open_session
+from util.session import SessionService
 
 app = Flask(__name__)
 
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 app.config["SECRET_KEY"] = b'TIq2mUesnvuk/c9CdnZ/B+4guM+u/PkoKs27NNDxZ8I'
-
 
 # Tell browser to don't cache anything
 # @app.after_request
@@ -21,25 +18,10 @@ app.config["SECRET_KEY"] = b'TIq2mUesnvuk/c9CdnZ/B+4guM+u/PkoKs27NNDxZ8I'
 #     response.headers["Pragma"] = "no-cache"
 #     return response
 
-
-def open_session(f):
-    """
-    Decorator to create session and giving the session context to wrapped function.
-
-    http://flask.pocoo.org/docs/0.12/patterns/viewdecorators/
-    """
-
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        session_service = SessionService()
-        if session_service.has_session():
-            with session_service.get_session_context() as context:
-                return f(context, *args, **kwargs)
-        else:
-            session_service.create_session()
-            return redirect(url_for("check_session", next=request.url))
-
-    return decorated_function
+if app.debug:
+    render_template = html_prettify(render_template)
+else:
+    render_template = html_minify(render_template)
 
 
 @app.route("/check-session")

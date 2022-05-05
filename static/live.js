@@ -10,12 +10,14 @@
     const REFRESH_BUTTON_ID = 'refreshButton';
     const STOP_LABEL = 'Остановить';
     const CONTINUE_LABEL = 'Продолжить';
+    const QUEUE_SIZE = 5;
 
     let worldContainer;
     let counter;
     let refreshButton;
     let _autoUpdate = false;
     let currentUpdateLoopId = 0;
+    let queue;
     init();
 
     // ------------------------------------------------------------------------
@@ -42,6 +44,8 @@
             console.warn(`Element with id='${REFRESH_BUTTON_ID}' was not found on the page`);
         }
 
+        queue = new Queue(QUEUE_SIZE);
+
         const url = new URL(location);
         _autoUpdate = url.searchParams.has(PARAM_NAME);
 
@@ -49,8 +53,8 @@
             startAutoUpdateWithTimeout(currentUpdateLoopId);
         }
 
-        refreshButton?.addEventListener('click', refreshButtonClick);
         updateRefreshButtonLabel();
+        refreshButton?.addEventListener('click', refreshButtonClick);
     }
 
     // ------------------------------------------------------------------------
@@ -78,36 +82,129 @@
     // ------------------------------------------------------------------------
 
     function startAutoUpdateNow() {
-        currentUpdateLoopId++;
-        autoUpdateLoop(currentUpdateLoopId).then();
+        stopAutoUpdate();
+        loadWorldLoop(currentUpdateLoopId).then();
+        showWorldLoop(currentUpdateLoopId).then();
     }
 
     function startAutoUpdateWithTimeout() {
-        currentUpdateLoopId++;
-        setTimeout(() => autoUpdateLoop(currentUpdateLoopId), UPDATE_TIMEOUT);
+        stopAutoUpdate();
+        loadWorldLoop(currentUpdateLoopId).then();
+        const loopId = currentUpdateLoopId;
+        setTimeout(() => showWorldLoop(loopId).then(), UPDATE_TIMEOUT);
     }
 
     function stopAutoUpdate() {
         currentUpdateLoopId++;
     }
 
-    async function autoUpdateLoop(updateLoopId) {
-        let startTime = Date.now();
-        while (updateLoopId === currentUpdateLoopId && await updateWorld()) {
-            const endTime = Date.now();
-            const timeout = Math.max(UPDATE_TIMEOUT - (endTime - startTime), 0);
-            startTime = endTime + timeout;
-            await new Promise(f => setTimeout(f, timeout));
+    // ------------------------------------------------------------------------
+
+    class Queue {
+        constructor(capacity) {
+            this._array = new Array(capacity);
+            this._size = 0;
+            this._first = 0;
+            this._last = 0;
+        }
+
+        get capacity() {
+            return this._array.length;
+        }
+
+        isEmpty() {
+            return this._size === 0;
+        }
+
+        isFull() {
+            return this._size === this._array.length;
+        }
+
+        push(value) {
+            if (this.isFull()) {
+                return false;
+            } else {
+                this._array[this._last] = value;
+                this._last = (this._last + 1) % this.capacity;
+                this._size++;
+                return true;
+            }
+        }
+
+        shift() {
+            if (this.isEmpty()) {
+                return null;
+            } else {
+                const result = this._array[this._first];
+                this._first = (this._first + 1) % this.capacity;
+                this._size--;
+                return result;
+            }
+        }
+    }
+
+    async function sleep(timeout) {
+        await new Promise(f => setTimeout(f, timeout));
+    }
+
+    async function loadWorldLoop(loopId) {
+
+        while (loopId === currentUpdateLoopId) {
+            if (queue.isFull()) {
+                await sleep(10);
+            } else {
+                try {
+                    const response = await fetch(WORLD_URL);
+
+                    if (response.ok) {
+                        queue.push({html_text: await response.text(), susses: true});
+                    } else {
+                        queue.push({html_text: await response.text(), susses: false});
+                        break;
+                    }
+                } catch (e) {
+                    queue.push({html_text: `<h1>Error</h1><p>Can't load world: ${e.message}</p>`, susses: false});
+                    break;
+                }
+            }
         }
     }
 
     // ------------------------------------------------------------------------
 
-    async function updateWorld() {
-        const response = await fetch(WORLD_URL);
-        setTimeout(async () => showWorld(await response.text()), 0);
-        return response.ok;
+    async function showWorldLoop(loopId) {
+        let startTime = Date.now();
+
+        while (loopId === currentUpdateLoopId) {
+
+            if (queue.isEmpty()) {
+                await sleep(10);
+                startTime = Date.now();
+                continue;
+            }
+
+            const response = queue.shift();
+            showWorld(response.html_text);
+
+            if (!response.susses) {
+                autoUpdate(false);
+                break;
+            }
+
+            const endTime = Date.now();
+            const timeout = UPDATE_TIMEOUT - (endTime - startTime);
+
+            if (timeout > 0) {
+                startTime = endTime + timeout;
+                await sleep(timeout);
+            } else {
+                startTime = endTime;
+                await sleep(0);
+            }
+        }
     }
+
+    // ------------------------------------------------------------------------
 
     function showWorld(html_text) {
         worldContainer.innerHTML = html_text;
