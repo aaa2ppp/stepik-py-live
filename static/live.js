@@ -11,6 +11,7 @@
     const STOP_LABEL = 'Остановить';
     const CONTINUE_LABEL = 'Продолжить';
     const QUEUE_SIZE = 5;
+    const QUEUE_TIMEOUT = 10;
 
     let worldContainer;
     let counter;
@@ -100,6 +101,80 @@
 
     // ------------------------------------------------------------------------
 
+    async function loadWorldLoop(loopId) {
+
+        while (loopId === currentUpdateLoopId) {
+            if (queue.isFull()) {
+                await sleep(QUEUE_TIMEOUT);
+            } else {
+                try {
+                    const response = await fetch(WORLD_URL);
+
+                    if (response.ok) {
+                        queue.push({html_text: await response.text(), susses: true});
+                    } else {
+                        queue.push({html_text: await response.text(), susses: false});
+                        break;
+                    }
+                } catch (e) {
+                    queue.push({html_text: `<h1>Error</h1><p>Can't load world: ${e.message}</p>`, susses: false});
+                    break;
+                }
+            }
+        }
+    }
+
+    async function showWorldLoop(loopId) {
+        let startTime = Date.now();
+
+        while (loopId === currentUpdateLoopId) {
+
+            if (queue.isEmpty()) {
+                await sleep(QUEUE_TIMEOUT);
+                startTime = Date.now();
+                continue;
+            }
+
+            const response = queue.shift();
+            showWorld(response.html_text);
+
+            if (!response.susses) {
+                autoUpdate(false);
+                break;
+            }
+
+            const endTime = Date.now();
+            const timeout = UPDATE_TIMEOUT - (endTime - startTime);
+
+            if (timeout > 0) {
+                startTime = endTime + timeout;
+                await sleep(timeout);
+            } else {
+                startTime = endTime;
+                await sleep(0);
+            }
+        }
+    }
+
+    function showWorld(html_text) {
+        worldContainer.innerHTML = html_text;
+        if (counter) {
+            const hiddenCounter = document.getElementById(HIDDEN_COUNTER_ID);
+            if (hiddenCounter) {
+                counter.textContent = hiddenCounter.textContent;
+            } else {
+                console.warn(`Element with id='${HIDDEN_COUNTER_ID}' was not found in the loaded HTML of the world`);
+                counter.textContent = '??';
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------------
+
+    async function sleep(timeout) {
+        await new Promise(f => setTimeout(f, timeout));
+    }
+
     class Queue {
         constructor(capacity) {
             this._array = new Array(capacity);
@@ -139,82 +214,6 @@
                 this._first = (this._first + 1) % this.capacity;
                 this._size--;
                 return result;
-            }
-        }
-    }
-
-    async function sleep(timeout) {
-        await new Promise(f => setTimeout(f, timeout));
-    }
-
-    async function loadWorldLoop(loopId) {
-
-        while (loopId === currentUpdateLoopId) {
-            if (queue.isFull()) {
-                await sleep(10);
-            } else {
-                try {
-                    const response = await fetch(WORLD_URL);
-
-                    if (response.ok) {
-                        queue.push({html_text: await response.text(), susses: true});
-                    } else {
-                        queue.push({html_text: await response.text(), susses: false});
-                        break;
-                    }
-                } catch (e) {
-                    queue.push({html_text: `<h1>Error</h1><p>Can't load world: ${e.message}</p>`, susses: false});
-                    break;
-                }
-            }
-        }
-    }
-
-    // ------------------------------------------------------------------------
-
-    async function showWorldLoop(loopId) {
-        let startTime = Date.now();
-
-        while (loopId === currentUpdateLoopId) {
-
-            if (queue.isEmpty()) {
-                await sleep(10);
-                startTime = Date.now();
-                continue;
-            }
-
-            const response = queue.shift();
-            showWorld(response.html_text);
-
-            if (!response.susses) {
-                autoUpdate(false);
-                break;
-            }
-
-            const endTime = Date.now();
-            const timeout = UPDATE_TIMEOUT - (endTime - startTime);
-
-            if (timeout > 0) {
-                startTime = endTime + timeout;
-                await sleep(timeout);
-            } else {
-                startTime = endTime;
-                await sleep(0);
-            }
-        }
-    }
-
-    // ------------------------------------------------------------------------
-
-    function showWorld(html_text) {
-        worldContainer.innerHTML = html_text;
-        if (counter) {
-            const hiddenCounter = document.getElementById(HIDDEN_COUNTER_ID);
-            if (hiddenCounter) {
-                counter.textContent = hiddenCounter.textContent;
-            } else {
-                console.warn(`Element with id='${HIDDEN_COUNTER_ID}' was not found in the loaded HTML of the world`);
-                counter.textContent = '??';
             }
         }
     }
