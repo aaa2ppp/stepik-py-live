@@ -1,12 +1,14 @@
 # https://wiki.python.org/moin/BitArrays
 # A bit array demo - written for Python 3.0
 import array
+from random import randint
 
 
-def makeBitArray(bitSize, fill=0):
+def makeBitArray(bitSize, fill=0, random=False):
     intSize = bitSize >> 5  # number of 32 bit integers
     if (bitSize & 31):  # if bitSize != (32 * n) add
         intSize += 1  # a record for stragglers
+
     if fill == 1:
         fill = 4294967295  # all bits set
     else:
@@ -14,7 +16,13 @@ def makeBitArray(bitSize, fill=0):
 
     bitArray = array.array('I')  # 'I' = unsigned 32-bit integer
 
-    bitArray.extend((fill,) * intSize)
+    if random:
+        for _ in range(intSize):
+            bitArray.append(randint(0, 0xFFFFFFFF))
+    else:
+        bitArray.extend((fill,) * intSize)
+
+    bitArray[-1] &= (0xFFFFFFFF >> (32 - bitSize & 31))  # to correctly compare arrays, clear the unused tail
 
     return bitArray
 

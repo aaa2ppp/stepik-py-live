@@ -6,6 +6,7 @@
 }
 
 .world {
+    font-size: smaller;
     border: 1px solid black;
     border-collapse: collapse;
     margin: auto;
@@ -16,8 +17,8 @@
     padding: 5px;
     color: whitesmoke;
     background: whitesmoke;
-    width: 1rem;
-    height: 1rem;
+    width: 1em;
+    height: 1em;
 }
 
 .living-cell {
@@ -40,6 +41,19 @@
 
 .column {
     width: 86ch
+}
+
+.error {
+    font-size: small;
+    color: red;
+}
+
+.note {
+    font-size: small;
+}
+
+.text {
+    text-align: justify;
 }
 
 /* Q: What drugs?.. */

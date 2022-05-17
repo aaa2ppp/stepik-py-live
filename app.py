@@ -1,3 +1,5 @@
+import os
+
 from flask import Flask, render_template, request, redirect, url_for
 from forms import WorldSizeForm
 
@@ -11,12 +13,13 @@ app.config["TEMPLATES_AUTO_RELOAD"] = True
 app.config["SECRET_KEY"] = b'TIq2mUesnvuk/c9CdnZ/B+4guM+u/PkoKs27NNDxZ8I'
 
 # Tell browser to don't cache anything
-# @app.after_request
-# def after_request(response):
-#     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-#     response.headers["Expires"] = 0
-#     response.headers["Pragma"] = "no-cache"
-#     return response
+if int(os.environ.get('NO_CACHE', "0")):
+    @app.after_request
+    def after_request(response):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Expires"] = 0
+        response.headers["Pragma"] = "no-cache"
+        return response
 
 if app.debug:
     render_template = html_prettify(render_template)
@@ -50,8 +53,9 @@ def index(context):
 @open_session
 def live(context):
     try:
-        cells = GameOfLife(context).get_next_generation()
-        return render_template("live.html", cells=cells)
+        game = GameOfLife(context)
+        cells = game.get_next_generation()
+        return render_template("live.html", cells=cells, game_over=game.is_over())
     except NoCellGenerationError:
         return no_cell_generation_error_message()
 
@@ -60,8 +64,9 @@ def live(context):
 @open_session
 def world(context):
     try:
-        cells = GameOfLife(context).get_next_generation()
-        return render_template("world.html", cells=cells)
+        game = GameOfLife(context)
+        cells = game.get_next_generation()
+        return render_template("world.html", cells=cells, game_over=game.is_over())
     except NoCellGenerationError:
         return no_cell_generation_error_message()
 

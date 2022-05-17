@@ -1,5 +1,4 @@
 import array
-from random import randint
 from functools import reduce
 from operator import add
 from typing import Optional
@@ -65,6 +64,10 @@ class CellGeneration:
     def serial(self) -> int:
         return self._serial
 
+    @property
+    def world(self) -> array:
+        return self._world
+
     def _create_world(self, height, width):
         """
         Descendants must override this method
@@ -80,11 +83,7 @@ class CellGeneration:
 
 class RandomCellGeneration(CellGeneration):
     def _create_world(self, height, width):
-        world = array.array('I')
-        size = (height * width + 31) >> 5
-        for i in range(size):
-            world.append(randint(0, 0xFFFFFFFF))
-        return world
+        return makeBitArray(height * width, random=True)
 
 
 class NextCellGeneration(CellGeneration):
@@ -118,13 +117,19 @@ class GameOfLifeMeta(type):
 
 
 class GameOfLife(metaclass=GameOfLifeMeta):
+    max_history_length = 10
+
     def __init__(self):
         self._cell_generation = None
         self._is_new_life = False
+        self._is_over = True
+        self._empty_world = None
 
     def create_new_life(self, height: int, width: int) -> None:
+        self._empty_world = makeBitArray(height * width)
         self._cell_generation = RandomCellGeneration(height, width)
         self._is_new_life = True
+        self._is_over = False
 
     def get_next_generation(self) -> CellGeneration:
         if self._cell_generation is None:
@@ -132,8 +137,30 @@ class GameOfLife(metaclass=GameOfLifeMeta):
 
         if self._is_new_life:
             self._is_new_life = False
-        else:
-            self._cell_generation.forget_previous()
+        elif not self.is_over():
             self._cell_generation = NextCellGeneration(self._cell_generation)
 
         return self._cell_generation
+
+    def is_over(self):
+        if self._is_over:
+            return True
+
+        last = self._cell_generation
+        if last.world == self._empty_world:
+            self._is_over = True
+            return True
+
+        # NOTE: To avoid excessive load, we limit the history of generations.
+        prev = last
+        for _ in range(self.max_history_length):
+            prev = prev.previous
+            if prev is None:
+                return False
+
+            if prev.world == last.world:
+                self._is_over = True
+                return True
+
+        prev.forget_previous()
+        return False

@@ -5,7 +5,7 @@
     <table class="centered">
         <tr valign="middle">
             <td>
-                <a href="{{ url_for('index') }}" class="btn btn-warning">На главную</a>
+                <a id="exitButton" href="{{ url_for('index') }}" class="btn btn-warning">На главную</a>
             </td>
             <td>
                 <div id="counter" class="counter">{{ cells.serial }}</div>
@@ -14,8 +14,8 @@
                 <a id="refreshButton" href="" class="btn btn-info">Обновить</a>
             </td>
         </tr>
-    </table><br>
-    <div id="worldContainer">
+    </table>
+    <div id="worldContainer" style="font-size: smaller">
         {% include "world.html" %}
     </div>
 {% endblock %}

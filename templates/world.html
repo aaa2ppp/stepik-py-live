@@ -1,5 +1,11 @@
 <div id="hiddenCounter" class="hidden">{{ cells.serial }}</div>
 <div class="hidden">{{ cells.__class__.__name__ }}</div>
+{% if game_over %}
+    <h1 id="gameOver">GAME OVER</h1>
+{% else %}
+    <br>
+{% endif %}
+
 <table class="world" style="font-family: monospace;">
     {% set previous = cells.previous %}
     {% for row in range(0, cells.height) %}
