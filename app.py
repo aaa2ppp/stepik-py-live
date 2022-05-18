@@ -9,8 +9,13 @@ from util.session import SessionService
 
 app = Flask(__name__)
 
-app.config["TEMPLATES_AUTO_RELOAD"] = True
 app.config["SECRET_KEY"] = b'TIq2mUesnvuk/c9CdnZ/B+4guM+u/PkoKs27NNDxZ8I'
+if app.debug:
+    app.config["TEMPLATES_AUTO_RELOAD"] = True
+
+app.jinja_options["trim_blocks"] = True
+app.jinja_options["lstrip_blocks"] = True
+app.jinja_options["keep_trailing_newline"] = True
 
 # Tell browser to don't cache anything
 if int(os.environ.get('NO_CACHE', "0")):
@@ -21,10 +26,6 @@ if int(os.environ.get('NO_CACHE', "0")):
         response.headers["Pragma"] = "no-cache"
         return response
 
-if app.debug:
-    render_template = html_prettify(render_template)
-else:
-    render_template = html_minify(render_template)
 
 
 @app.route("/check-session")
@@ -83,14 +84,14 @@ def no_cell_generation_error_message():
 @app.route("/new-live")
 @open_session
 def new_live(context):
-    GameOfLife(context).create_new_life(20, 20)
+    GameOfLife(context).create_new_life()
     return redirect(url_for("live"))
 
 
 @app.route("/new-world")
 @open_session
 def new_world(context):
-    GameOfLife(context).create_new_life(20, 20)
+    GameOfLife(context).create_new_life()
     return redirect(url_for("world"))
 
 

@@ -2,7 +2,7 @@
 
 (function () {
     const UPDATE_TIMEOUT = 1000;
-    const PARAM_NAME = "autoUpdate"
+    const URL_PARAM = "autoUpdate"
     const WORLD_URL = '/world';
     const WORLD_CONTAINER_ID = 'worldContainer';
     const COUNTER_ID = 'counter';
@@ -26,7 +26,9 @@
         const counter = getElementById(COUNTER_ID);
         const refreshButton = getElementById(REFRESH_BUTTON_ID);
         const exitButton = getElementById(EXIT_BUTTON_ID);
-        const queue = new Queue(QUEUE_SIZE);
+        const queue = [];
+
+        let currentUpdateLoopId = 0;
         let _autoUpdate = undefined;
         init();
 
@@ -37,9 +39,13 @@
             }
 
             const url = new URL(location);
-            autoUpdate(url.searchParams.has(PARAM_NAME) && !document.getElementById(GAME_OVER_ID))
-            refreshButton?.addEventListener('click', refreshButtonClick);
+            autoUpdate(url.searchParams.has(URL_PARAM) && !document.getElementById(GAME_OVER_ID))
             exitButton?.addEventListener('clist', () => autoUpdate(false));
+            refreshButton?.addEventListener('click', (event) => {
+                autoUpdate(!autoUpdate());
+                event.preventDefault();
+                event.currentTarget.blur();
+            });
         }
 
         function getElementById(id) {
@@ -100,22 +106,29 @@
         async function loadWorldLoop(loopId) {
 
             while (loopId === currentUpdateLoopId) {
-                if (queue.isFull()) {
-                    await sleep(QUEUE_TIMEOUT);
-                } else {
-                    try {
-                        const response = await fetch(WORLD_URL);
+                if (queue.length === QUEUE_SIZE) {
+                    await sleep(UPDATE_TIMEOUT);
+                    continue;
+                }
 
-                        if (response.ok) {
-                            queue.push({html_text: await response.text(), susses: true});
-                        } else {
-                            queue.push({html_text: await response.text(), susses: false});
-                            break;
-                        }
-                    } catch (e) {
-                        queue.push({html_text: `<h1>Error</h1><p>Can't load world: ${e.message}</p>`, susses: false});
-                        break;
-                    }
+                try {
+                    const response = await fetch(WORLD_URL);
+                    const html_text = await response.text();
+
+                    // const template = document.createElement('template');
+                    // template.innerHTML = html_text;
+                    // const content = template.content;
+                    // const isGameOver = !!content.getElementById(GAME_OVER_ID);
+
+                    // queue.push({content: template.content, end: !response. ok || isGameOver});
+
+                    // if (isGameOver) {
+                    //     break;
+                    // }
+                    queue.push({content: html_text, end: !response.ok});
+                } catch (e) {
+                    queue.push({html_text: `<h1>Error</h1><p>Can't load world: ${e.message}</p>`, end: true});
+                    break;
                 }
             }
         }
@@ -125,16 +138,16 @@
 
             while (loopId === currentUpdateLoopId) {
 
-                if (queue.isEmpty()) {
-                    await sleep(QUEUE_TIMEOUT);
+                if (queue.length === 0) {
+                    await sleep(UPDATE_TIMEOUT / 2);
                     startTime = Date.now();
                     continue;
                 }
 
                 const response = queue.shift();
-                showWorld(response.html_text);
+                showWorld(response.content);
 
-                if (!response.susses || document.getElementById(GAME_OVER_ID)) {
+                if (response.end || document.getElementById(GAME_OVER_ID)) {
                     autoUpdate(false);
                     break;
                 }
@@ -152,75 +165,24 @@
             }
         }
 
-        function showWorld(html_text) {
-            worldContainer.innerHTML = html_text;
-            if (counter) {
+        function showWorld(content) {
+            // if (content) {
+            //     counter.textContent = parseInt(content.getElementById(HIDDEN_COUNTER_ID)?.textContent).toString();
+            // }
+            // worldContainer.replaceChildren(content);
+            worldContainer.innerHTML = content;
+            if (content) {
                 const hiddenCounter = document.getElementById(HIDDEN_COUNTER_ID);
-                if (hiddenCounter) {
-                    counter.textContent = hiddenCounter.textContent;
-                } else {
-                    console.warn(`Element with id='${HIDDEN_COUNTER_ID}' was not found in the loaded HTML of the world`);
-                    counter.textContent = '??';
-                }
+                counter.textContent = hiddenCounter?.textContent || 'NaN';
             }
         }
 
-        // ------------------------------------------------------------------------
 
         async function sleep(timeout) {
             await new Promise(f => setTimeout(f, timeout));
         }
 
-        class Queue {
-            constructor(capacity) {
-                this._array = new Array(capacity);
-                this._size = 0;
-                this._first = 0;
-                this._last = 0;
-            }
-
-            get capacity() {
-                return this._array.length;
-            }
-
-            isEmpty() {
-                return this._size === 0;
-            }
-
-            isFull() {
-                return this._size === this._array.length;
-            }
-
-            push(value) {
-                if (this.isFull()) {
-                    return false;
-                } else {
-                    this._array[this._last] = value;
-                    this._last = (this._last + 1) % this.capacity;
-                    this._size++;
-                    return true;
-                }
-            }
-
-            shift() {
-                if (this.isEmpty()) {
-                    return null;
-                } else {
-                    const result = this._array[this._first];
-                    this._first = (this._first + 1) % this.capacity;
-                    this._size--;
-                    return result;
-                }
-            }
-        }
-
         // ------------------------------------------------------------------------
-
-        function refreshButtonClick(event) {
-            autoUpdate(!autoUpdate());
-            event.preventDefault();
-            event.currentTarget.blur();
-        }
 
         function updateRefreshButtonLabel() {
             if (refreshButton) {
@@ -234,9 +196,9 @@
             const url = new URL(location);
 
             if (autoUpdate()) {
-                url.searchParams.set(PARAM_NAME, 'on');
+                url.searchParams.set(URL_PARAM, 'on');
             } else {
-                url.searchParams.delete(PARAM_NAME);
+                url.searchParams.delete(URL_PARAM);
             }
 
             history.replaceState(null, null, url);

@@ -5,8 +5,11 @@
     padding-top: 0.5rem;
 }
 
+.world-container {
+    overflow: scroll;
+}
+
 .world {
-    font-size: smaller;
     border: 1px solid black;
     border-collapse: collapse;
     margin: auto;
@@ -14,7 +17,7 @@
 
 .cell {
     border: 1px solid black;
-    padding: 5px;
+    padding: 0px;
     color: whitesmoke;
     background: whitesmoke;
     width: 1em;

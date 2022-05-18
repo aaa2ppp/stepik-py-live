@@ -125,7 +125,7 @@ class GameOfLife(metaclass=GameOfLifeMeta):
         self._is_over = True
         self._empty_world = None
 
-    def create_new_life(self, height: int, width: int) -> None:
+    def create_new_life(self, height: int = 25, width: int = 25) -> None:
         self._empty_world = makeBitArray(height * width)
         self._cell_generation = RandomCellGeneration(height, width)
         self._is_new_life = True

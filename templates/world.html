@@ -1,24 +1,24 @@
 <div id="hiddenCounter" class="hidden">{{ cells.serial }}</div>
 <div class="hidden">{{ cells.__class__.__name__ }}</div>
-{% if game_over %}
+{% if game_over -%}
     <h1 id="gameOver">GAME OVER</h1>
-{% else %}
+{% else -%}
     <br>
-{% endif %}
+{% endif -%}
 
 <table class="world" style="font-family: monospace;">
-    {% set previous = cells.previous %}
-    {% for row in range(0, cells.height) %}
+    {% set previous = cells.previous -%}
+    {% for row in range(0, cells.height) -%}
         <tr>
-            {% for col in range(0, cells.width) %}
-                {% if cells.is_live_cell(row, col) %}
+            {% for col in range(0, cells.width) -%}
+                {% if cells.is_live_cell(row, col) -%}
                     <td class="cell living-cell">X</td>
-                {% elif previous and previous.is_live_cell(row, col) %}
+                {% elif previous and previous.is_live_cell(row, col) -%}
                     <td class="cell dead-cell">D</td>
-                {% else %}
+                {% else -%}
                     <td class="cell">_</td>
-                {% endif %}
-            {% endfor %}
+                {% endif -%}
+            {% endfor -%}
         </tr>
-    {% endfor %}
+    {% endfor -%}
 </table>

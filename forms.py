@@ -6,7 +6,7 @@ from util.session import SessionService, SessionContext
 
 _WORLD_MIN_SIZE = 1
 _WORLD_MAX_SIZE = 100
-_WORLD_DEFAULT_SIZE = 20
+_WORLD_DEFAULT_SIZE = 25
 
 
 class WorldSizeForm(FlaskForm):
