@@ -1,208 +1,212 @@
 'use strict';
 
-(function () {
-    const UPDATE_TIMEOUT = 1000;
-    const URL_PARAM = "autoUpdate"
+(function run() {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', run);
+        return;
+    }
+
+    const AUTO_UPDATE_PARAM = "autoupdate"
+    const UPDATE_PERIOD_PARAM = "update_period";
+
     const WORLD_URL = '/world';
+
     const WORLD_CONTAINER_ID = 'worldContainer';
     const COUNTER_ID = 'counter';
     const HIDDEN_COUNTER_ID = 'hiddenCounter';
     const EXIT_BUTTON_ID = 'exitButton';
     const REFRESH_BUTTON_ID = 'refreshButton';
     const GAME_OVER_ID = 'gameOver';
+
     const STOP_LABEL = 'Остановить';
     const CONTINUE_LABEL = 'Продолжить';
-    const QUEUE_SIZE = 5;
-    const QUEUE_TIMEOUT = 10;
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', run);
-    } else {
-        run();
+    const FRAME_QUEUE_SIZE = 5;
+    const FRAME_QUEUE_TIMEOUT = 10;
+
+    const worldContainer = getElementById(WORLD_CONTAINER_ID);
+    if (!worldContainer) {
+        console.error(`${WORLD_CONTAINER_ID}' is required`);
+        return;
     }
 
-    function run() {
-        const worldContainer = getElementById(WORLD_CONTAINER_ID);
-        const counter = getElementById(COUNTER_ID);
-        const refreshButton = getElementById(REFRESH_BUTTON_ID);
-        const exitButton = getElementById(EXIT_BUTTON_ID);
-        const queue = [];
+    const counter = getElementById(COUNTER_ID);
+    const refreshButton = getElementById(REFRESH_BUTTON_ID);
+    const exitButton = getElementById(EXIT_BUTTON_ID);
 
-        let currentUpdateLoopId = 0;
-        let _autoUpdate = undefined;
-        init();
+    const frameQueue = [];
+    let autoUpdateEnabled = undefined;
+    let currentUpdateLoopId = 0;
 
-        function init() {
-            if (!worldContainer) {
-                console.error(`${WORLD_CONTAINER_ID}' is required`);
-                return;
-            }
+    let _url = new URL(location);
 
-            const url = new URL(location);
-            autoUpdate(url.searchParams.has(URL_PARAM) && !document.getElementById(GAME_OVER_ID))
-            exitButton?.addEventListener('clist', () => autoUpdate(false));
-            refreshButton?.addEventListener('click', (event) => {
-                autoUpdate(!autoUpdate());
-                event.preventDefault();
-                event.currentTarget.blur();
-            });
+    let updatePeriod = parseInt(_url.searchParams.get(UPDATE_PERIOD_PARAM)) || 1000;
+    if (updatePeriod < 100) {
+        console.warn(`Too small value of ${UPDATE_PERIOD_PARAM}=${updatePeriod}. Set it to 100`);
+        updatePeriod = 100;
+    }
+
+    let _autoupdate = _url.searchParams.has(AUTO_UPDATE_PARAM) &&
+        ["no", "off", "false", "0"].indexOf(_url.searchParams.get(AUTO_UPDATE_PARAM)) === -1;
+
+    _url = null;
+
+    setAutoUpdate(_autoupdate && !document.getElementById(GAME_OVER_ID));
+
+    exitButton?.addEventListener('clist', () => setAutoUpdate(false));
+
+    refreshButton?.addEventListener('click', (event) => {
+        setAutoUpdate(!autoUpdateEnabled);
+        event.preventDefault();
+        event.currentTarget.blur();
+    });
+
+    // ------------------------------------------------------------------------
+
+    function getElementById(id) {
+        const el = document.getElementById(id);
+        if (!el) {
+            console.warn(`Element with id='${id}' was not found on this page`);
         }
+        return el;
+    }
 
-        function getElementById(id) {
-            const el = document.getElementById(id);
-            if (!el) {
-                console.warn(`Element with id='${id}' was not found on the page`);
-            }
-            return el;
-        }
+    // ------------------------------------------------------------------------
 
-        // ------------------------------------------------------------------------
+    function setAutoUpdate(value) {
+        const oldValue = autoUpdateEnabled;
 
-        // Usage: [oldValue =] autoUpdate([newValue]);
-        function autoUpdate(value) {
-            const oldValue = _autoUpdate;
+        if (value !== undefined && value !== oldValue) {
+            autoUpdateEnabled = value;
 
-            if (value !== undefined && value !== oldValue) {
-                _autoUpdate = value;
+            updateRefreshButtonLabel();
+            updateUrl();
 
-                if (value) {
-                    if (oldValue === undefined) {
-                        startAutoUpdateWithTimeout();
-                    } else {
-                        startAutoUpdateNow();
-                    }
+            if (value) {
+                if (oldValue === undefined) {
+                    // at first time
+                    startUpdateLoopsWithTimeout();
                 } else {
-                    stopAutoUpdate();
+                    startUpdateLoopsNow();
                 }
-
-                updateRefreshButtonLabel();
-                updateUrl();
-            }
-
-            return oldValue;
-        }
-
-        // ------------------------------------------------------------------------
-
-        function startAutoUpdateNow() {
-            stopAutoUpdate();
-            loadWorldLoop(currentUpdateLoopId).then();
-            showWorldLoop(currentUpdateLoopId).then();
-        }
-
-        function startAutoUpdateWithTimeout() {
-            stopAutoUpdate();
-            loadWorldLoop(currentUpdateLoopId).then();
-            const loopId = currentUpdateLoopId;
-            setTimeout(() => showWorldLoop(loopId).then(), UPDATE_TIMEOUT);
-        }
-
-        function stopAutoUpdate() {
-            currentUpdateLoopId++;
-        }
-
-        // ------------------------------------------------------------------------
-
-        async function loadWorldLoop(loopId) {
-
-            while (loopId === currentUpdateLoopId) {
-                if (queue.length === QUEUE_SIZE) {
-                    await sleep(UPDATE_TIMEOUT);
-                    continue;
-                }
-
-                try {
-                    const response = await fetch(WORLD_URL);
-                    const html_text = await response.text();
-
-                    // const template = document.createElement('template');
-                    // template.innerHTML = html_text;
-                    // const content = template.content;
-                    // const isGameOver = !!content.getElementById(GAME_OVER_ID);
-
-                    // queue.push({content: template.content, end: !response. ok || isGameOver});
-
-                    // if (isGameOver) {
-                    //     break;
-                    // }
-                    queue.push({content: html_text, end: !response.ok});
-                } catch (e) {
-                    queue.push({html_text: `<h1>Error</h1><p>Can't load world: ${e.message}</p>`, end: true});
-                    break;
-                }
-            }
-        }
-
-        async function showWorldLoop(loopId) {
-            let startTime = Date.now();
-
-            while (loopId === currentUpdateLoopId) {
-
-                if (queue.length === 0) {
-                    await sleep(UPDATE_TIMEOUT / 2);
-                    startTime = Date.now();
-                    continue;
-                }
-
-                const response = queue.shift();
-                showWorld(response.content);
-
-                if (response.end || document.getElementById(GAME_OVER_ID)) {
-                    autoUpdate(false);
-                    break;
-                }
-
-                const endTime = Date.now();
-                const timeout = UPDATE_TIMEOUT - (endTime - startTime);
-
-                if (timeout > 0) {
-                    startTime = endTime + timeout;
-                    await sleep(timeout);
-                } else {
-                    startTime = endTime;
-                    await sleep(0);
-                }
-            }
-        }
-
-        function showWorld(content) {
-            // if (content) {
-            //     counter.textContent = parseInt(content.getElementById(HIDDEN_COUNTER_ID)?.textContent).toString();
-            // }
-            // worldContainer.replaceChildren(content);
-            worldContainer.innerHTML = content;
-            if (content) {
-                const hiddenCounter = document.getElementById(HIDDEN_COUNTER_ID);
-                counter.textContent = hiddenCounter?.textContent || 'NaN';
-            }
-        }
-
-
-        async function sleep(timeout) {
-            await new Promise(f => setTimeout(f, timeout));
-        }
-
-        // ------------------------------------------------------------------------
-
-        function updateRefreshButtonLabel() {
-            if (refreshButton) {
-                refreshButton.textContent = autoUpdate() ? STOP_LABEL : CONTINUE_LABEL;
-            }
-        }
-
-        // ------------------------------------------------------------------------
-
-        function updateUrl() {
-            const url = new URL(location);
-
-            if (autoUpdate()) {
-                url.searchParams.set(URL_PARAM, 'on');
             } else {
-                url.searchParams.delete(URL_PARAM);
+                stopUpdateLoops();
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------------
+
+    function startUpdateLoopsNow() {
+        stopUpdateLoops();
+        loadWorldLoop(currentUpdateLoopId).then();
+        showWorldLoop(currentUpdateLoopId).then();
+    }
+
+    function startUpdateLoopsWithTimeout() {
+        stopUpdateLoops();
+        loadWorldLoop(currentUpdateLoopId).then();
+        const loopId = currentUpdateLoopId;
+        setTimeout(() => showWorldLoop(loopId).then(), updatePeriod);
+    }
+
+    function stopUpdateLoops() {
+        currentUpdateLoopId++;
+    }
+
+    // ------------------------------------------------------------------------
+
+    function updateRefreshButtonLabel() {
+        if (refreshButton) {
+            refreshButton.textContent = autoUpdateEnabled ? STOP_LABEL : CONTINUE_LABEL;
+        }
+    }
+
+    function updateUrl() {
+        const url = new URL(location);
+
+        if (autoUpdateEnabled) {
+            url.searchParams.set(AUTO_UPDATE_PARAM, 'on');
+        } else {
+            url.searchParams.delete(AUTO_UPDATE_PARAM);
+        }
+
+        url.searchParams.set(UPDATE_PERIOD_PARAM, updatePeriod.toString());
+
+        history.replaceState(null, null, url);
+    }
+
+    // ------------------------------------------------------------------------
+
+    async function sleep(timeout) {
+        await new Promise(f => setTimeout(f, timeout));
+    }
+
+    async function loadWorldLoop(loopId) {
+
+        while (loopId === currentUpdateLoopId) {
+            if (frameQueue.length === FRAME_QUEUE_SIZE) {
+                await sleep(Math.floor(updatePeriod / 2));
+                continue;
             }
 
-            history.replaceState(null, null, url);
+            try {
+                const response = await fetch(WORLD_URL);
+                const html_text = await response.text();
+
+                const template = document.createElement('template');
+                template.innerHTML = html_text;
+                const content = template.content;
+                const isGameOver = !!content.getElementById(GAME_OVER_ID);
+
+                frameQueue.push({content, end: !response.ok || isGameOver});
+
+                if (isGameOver) {
+                    break;
+                }
+            } catch (e) {
+                frameQueue.push({html_text: `<h1>Error</h1><p>Can't load world: ${e.message}</p>`, end: true});
+                break;
+            }
         }
+    }
+
+    async function showWorldLoop(loopId) {
+        let startTime = Date.now();
+
+        while (loopId === currentUpdateLoopId) {
+
+            if (frameQueue.length === 0) {
+                await sleep(FRAME_QUEUE_TIMEOUT);
+                continue;
+            }
+
+            const {content, end} = frameQueue.shift();
+            showWorld(content);
+
+            if (end) {
+                setAutoUpdate(false);
+                break;
+            }
+
+            const endTime = Date.now();
+            const timeout = updatePeriod - (endTime - startTime);
+
+            if (timeout > 0) {
+                startTime = endTime + timeout;
+                await sleep(timeout);
+            } else {
+                startTime = endTime;
+                await sleep(0);
+            }
+        }
+    }
+
+    function showWorld(content) {
+        if (counter) {
+            counter.textContent = parseInt(content.getElementById(HIDDEN_COUNTER_ID)?.textContent).toString();
+        }
+        worldContainer.replaceChildren(content);
     }
 
 })();

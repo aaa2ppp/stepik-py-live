@@ -1,4 +1,4 @@
-from wtforms import IntegerField, SubmitField
+from wtforms import IntegerField, SubmitField, BooleanField, SelectField
 from wtforms.validators import InputRequired, NumberRange
 from flask_wtf import FlaskForm
 
@@ -16,7 +16,7 @@ class WorldSizeForm(FlaskForm):
 
     height = IntegerField(
         "Высота мира",
-        default=lambda: _get_default_value('default_height', _WORLD_DEFAULT_SIZE),
+        default=lambda: _get_default_value('height', _WORLD_DEFAULT_SIZE),
         validators=[
             InputRequired(),
             NumberRange(_WORLD_MIN_SIZE, _WORLD_MAX_SIZE)
@@ -25,11 +25,23 @@ class WorldSizeForm(FlaskForm):
 
     width = IntegerField(
         "Ширина мира",
-        default=lambda: _get_default_value('default_width', _WORLD_DEFAULT_SIZE),
+        default=lambda: _get_default_value('width', _WORLD_DEFAULT_SIZE),
         validators=[
             InputRequired(),
             NumberRange(_WORLD_MIN_SIZE, _WORLD_MAX_SIZE)
         ]
+    )
+
+    update_period = SelectField(
+        "Период обновления",
+        choices=((2000, "2 сек"), (1000, "1 сек"), (750, "0.75 сек"), (500, "0.5 сек"), (250, "0.25 сек")),
+        coerce=int,
+        default=lambda: _get_default_value('update_period', 1000)
+    )
+
+    disable_js = BooleanField(
+        "Не загружать js скрипты",
+        default=lambda: _get_default_value('disable_js', False)
     )
 
     submit = SubmitField("Создать жизнь")
@@ -45,8 +57,10 @@ class WorldSizeForm(FlaskForm):
     def validate_on_submit(self):
         result = super().validate_on_submit()
         if result:
-            self._context_data['default_height'] = self.height.data
-            self._context_data['default_width'] = self.width.data
+            self._context_data['height'] = self.height.data
+            self._context_data['width'] = self.width.data
+            self._context_data['update_period'] = self.update_period.data
+            self._context_data['disable_js'] = self.disable_js.data
         return result
 
 

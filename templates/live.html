@@ -22,6 +22,7 @@
 
 {% block scripts %}
     {{ super() }}
-    <script src="{{ url_for('static', filename='live.js') }}"></script>
+    {% if not disable_js %}
+        <script src="{{ url_for('static', filename='live.js') }}"></script>
+    {% endif %}
 {% endblock %}
- 

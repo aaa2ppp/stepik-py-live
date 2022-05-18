@@ -27,7 +27,6 @@ if int(os.environ.get('NO_CACHE', "0")):
         return response
 
 
-
 @app.route("/check-session")
 def check_session():
     if SessionService().has_session():
@@ -43,9 +42,13 @@ def check_session():
 @open_session
 def index(context):
     form = WorldSizeForm(context)
-    if request.method == "POST" and form.validate_on_submit():
+    if form.validate_on_submit():
         GameOfLife(context).create_new_life(height=form.height.data, width=form.width.data)
-        return redirect(url_for("live", autoUpdate="on"))
+        context.data['disable_js'] = form.disable_js.data
+        if context.data['disable_js']:
+            return redirect(url_for("live"))
+        else:
+            return redirect(url_for("live", autoupdate="on", update_period=form.update_period.data))
     else:
         return render_template("index.html", form=form)
 
@@ -56,7 +59,7 @@ def live(context):
     try:
         game = GameOfLife(context)
         cells = game.get_next_generation()
-        return render_template("live.html", cells=cells, game_over=game.is_over())
+        return render_template("live.html", cells=cells, game_over=game.is_over(), disable_js=context.get('disable_js'))
     except NoCellGenerationError:
         return no_cell_generation_error_message()
 
@@ -84,14 +87,16 @@ def no_cell_generation_error_message():
 @app.route("/new-live")
 @open_session
 def new_live(context):
-    GameOfLife(context).create_new_life()
+    GameOfLife(context).create_new_life(25, 25)
+    context.data['disable_js'] = True
     return redirect(url_for("live"))
 
 
 @app.route("/new-world")
 @open_session
 def new_world(context):
-    GameOfLife(context).create_new_life()
+    GameOfLife(context).create_new_life(25, 25)
+    context.data['disable_js'] = True
     return redirect(url_for("world"))
 
 

@@ -5,23 +5,23 @@
     padding-top: 0.5rem;
 }
 
+/*
 .world-container {
-    overflow: scroll;
 }
+*/
 
 .world {
     border: 1px solid black;
     border-collapse: collapse;
     margin: auto;
+    font-size: 0;
 }
 
 .cell {
     border: 1px solid black;
-    padding: 0px;
+    padding: 0;
     color: whitesmoke;
     background: whitesmoke;
-    width: 1em;
-    height: 1em;
 }
 
 .living-cell {
