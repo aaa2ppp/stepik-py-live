@@ -6,6 +6,7 @@ from typing import Optional
 from util.bitarray import makeBitArray, setBit, testBit
 from util.session import SessionContext
 
+_MAX_HISTORY_LENGTH = 10
 
 class GameOfLiveRules:
     """
@@ -47,6 +48,7 @@ class CellGeneration:
         self._previous = previous
         self._serial = serial
         self._world = self._create_world(height, width)
+        self._is_over = False
 
     @property
     def height(self) -> int:
@@ -67,6 +69,29 @@ class CellGeneration:
     @property
     def world(self) -> array:
         return self._world
+
+    @property
+    def is_over(self):
+        if self._is_over:
+            return True
+
+        if sum(self._world) == 0:
+            self._is_over = True
+            return True
+
+        # NOTE: To avoid excessive load, we limit the history of generations.
+        last = self
+        prev = last
+        for _ in range(_MAX_HISTORY_LENGTH):
+            prev = prev.previous
+            if prev is None:
+                return False
+
+            if prev.world == last.world:
+                self._is_over = True
+                return True
+
+        return False
 
     def _create_world(self, height, width):
         """
@@ -104,7 +129,11 @@ class NextCellGeneration(CellGeneration):
         return world
 
 
-class NoCellGenerationError(Exception):
+class GameOfLifeError(Exception):
+    pass
+
+
+class NoGenerationError(GameOfLifeError):
     pass
 
 
@@ -127,13 +156,13 @@ class GameOfLife(metaclass=GameOfLifeMeta):
 
     def create_new_life(self, height: int = 20, width: int = 20) -> None:
         self._empty_world = makeBitArray(height * width)
-        self._cell_generation = RandomCellGeneration(height, width)
+        self._cell_generation: CellGeneration = RandomCellGeneration(height, width)
         self._is_new_life = True
         self._is_over = False
 
     def get_next_generation(self) -> CellGeneration:
         if self._cell_generation is None:
-            raise NoCellGenerationError("Maybe you forgot to call 'create_new_life' before")
+            raise NoGenerationError('First need to call the create_new_life function')
 
         if self._is_new_life:
             self._is_new_life = False
@@ -142,25 +171,22 @@ class GameOfLife(metaclass=GameOfLifeMeta):
 
         return self._cell_generation
 
+    def get_generation(self, serial: int) -> CellGeneration:
+        if self._cell_generation is None:
+            raise NoGenerationError('First need to call the create_new_life function')
+
+        if serial < 0:
+            raise GameOfLifeError('Serial must be positive number')
+
+        generation = self._cell_generation
+
+        while generation.previous is not None and generation.serial > serial:
+            generation = generation.previous
+
+        while generation.serial < serial and not self.is_over():
+            generation = self.get_next_generation()
+
+        return generation
+
     def is_over(self):
-        if self._is_over:
-            return True
-
-        last = self._cell_generation
-        if last.world == self._empty_world:
-            self._is_over = True
-            return True
-
-        # NOTE: To avoid excessive load, we limit the history of generations.
-        prev = last
-        for _ in range(self.max_history_length):
-            prev = prev.previous
-            if prev is None:
-                return False
-
-            if prev.world == last.world:
-                self._is_over = True
-                return True
-
-        prev.forget_previous()
-        return False
+        return self._cell_generation.is_over

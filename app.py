@@ -3,7 +3,7 @@ import os
 from flask import Flask, render_template, request, redirect, url_for
 from forms import WorldSizeForm
 
-from game_of_life import GameOfLife, NoCellGenerationError
+from game_of_life import GameOfLife, NoGenerationError
 from helpers import open_session, get_window_screen_size
 from util.session import SessionService
 
@@ -44,39 +44,55 @@ def index(context):
     form = WorldSizeForm(context)
     if form.validate_on_submit():
         GameOfLife(context).create_new_life(height=form.height.data, width=form.width.data)
-        context.data['disable_js'] = form.disable_js.data
-        if context.data['disable_js']:
-            return redirect(url_for("live"))
+        if form.disable_js.data:
+            return redirect(url_for("live", js="off"))
         else:
             return redirect(url_for("live", autoupdate="on", update_period=form.update_period.data))
     else:
         return render_template("index.html", form=form)
 
 
+def render_live(context, template: str, **kwargs):
+    try:
+        serial = request.args.get('serial')
+        if serial is not None:
+            serial = int(serial)
+            if serial < 0:
+                raise ValueError("Serial must be positive integer number")
+    except Exception as err:
+        return invalid_parameter_value_message('serial', str(err))
+
+    try:
+        game = GameOfLife(context)
+        generation = game.get_next_generation() if serial is None else game.get_generation(serial)
+    except NoGenerationError:
+        return no_generation_error_message()
+
+    return render_template(template, generation=generation, wss=get_window_screen_size(), **kwargs)
+
+
 @app.route("/live")
 @open_session
 def live(context):
-    try:
-        game = GameOfLife(context)
-        cells = game.get_next_generation()
-        return render_template("live.html", cells=cells, game_over=game.is_over(), disable_js=context.get('disable_js'),
-                               wss=get_window_screen_size())
-    except NoCellGenerationError:
-        return no_cell_generation_error_message()
+    js = request.args.get('serial')
+    if js is not None:
+        js = js.lower()
+    return render_live(context, "live.html", disable_js=(js is not None and js in ("no", "off", "false", "0")))
 
 
 @app.route("/world")
 @open_session
 def world(context):
-    try:
-        game = GameOfLife(context)
-        cells = game.get_next_generation()
-        return render_template("world.html", cells=cells, game_over=game.is_over(), wss=get_window_screen_size())
-    except NoCellGenerationError:
-        return no_cell_generation_error_message()
+    return render_live(context, "world.html")
 
 
-def no_cell_generation_error_message():
+def invalid_parameter_value_message(param_name: str, err_message: str):
+    code = 500
+    message = f"Value of {param_name} is invalid: {err_message}"
+    return render_template("error.html", message=message, code=code), code
+
+
+def no_generation_error_message():
     code = 500
     message = ("I'm sorry, but there was an error. There is no generation of cells." +
                " Please create new life.")

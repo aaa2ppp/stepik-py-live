@@ -8,10 +8,10 @@
                 <a id="exitButton" href="{{ url_for('index') }}" class="btn btn-warning">На главную</a>
             </td>
             <td>
-                <div id="counter" class="counter">{{ cells.serial }}</div>
+                <div id="counter" class="counter">{{ generation.serial }}</div>
             </td>
             <td>
-                <a id="refreshButton" href="" class="btn btn-info">Обновить</a>
+                <a id="refreshButton" href="?serial={{ generation.serial + 1 }}" class="btn btn-info">Обновить</a>
             </td>
         </tr>
     </table>

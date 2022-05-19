@@ -8,6 +8,7 @@
 
     const AUTO_UPDATE_PARAM = "autoupdate"
     const UPDATE_PERIOD_PARAM = "update_period";
+    const GENERATION_SERIAL_PARAM = "serial";
 
     const WORLD_URL = '/world';
 
@@ -35,6 +36,10 @@
     const exitButton = getElementById(EXIT_BUTTON_ID);
 
     const frameQueue = [];
+    let lastLoad = parseInt(counter?.textContent);
+    let lastShow = lastLoad;
+    let gameOverLoaded = !!document.getElementById(GAME_OVER_ID);
+
     let autoUpdateEnabled = undefined;
     let currentUpdateLoopId = 0;
 
@@ -124,14 +129,20 @@
 
     function updateUrl() {
         const url = new URL(location);
+        const params = url.searchParams;
 
         if (autoUpdateEnabled) {
-            url.searchParams.set(AUTO_UPDATE_PARAM, 'on');
+            params.set(AUTO_UPDATE_PARAM, 'on');
         } else {
-            url.searchParams.delete(AUTO_UPDATE_PARAM);
+            params.delete(AUTO_UPDATE_PARAM);
         }
 
-        url.searchParams.set(UPDATE_PERIOD_PARAM, updatePeriod.toString());
+        params.set(UPDATE_PERIOD_PARAM, updatePeriod.toString());
+        if (isNaN(lastShow)) {
+            params.delete(GENERATION_SERIAL_PARAM)
+        } else {
+            params.set(GENERATION_SERIAL_PARAM, lastShow.toString());
+        }
 
         history.replaceState(null, null, url);
     }
@@ -143,27 +154,27 @@
     }
 
     async function loadWorldLoop(loopId) {
+        let gameOver = false;
 
-        while (loopId === currentUpdateLoopId) {
-            if (frameQueue.length === FRAME_QUEUE_SIZE) {
-                await sleep(Math.floor(updatePeriod / 2));
+        while (loopId === currentUpdateLoopId && !gameOver) {
+            if (frameQueue.length >= FRAME_QUEUE_SIZE) {
+                await sleep(Math.floor(updatePeriod / 4));
                 continue;
             }
 
             try {
-                const response = await fetch(WORLD_URL);
+                lastLoad++;
+                const url = isNaN(lastLoad) ? WORLD_URL : WORLD_URL + `?serial=${lastLoad}`;
+                const response = await fetch(url);
                 const html_text = await response.text();
 
                 const template = document.createElement('template');
                 template.innerHTML = html_text;
                 const content = template.content;
-                const isGameOver = !!content.getElementById(GAME_OVER_ID);
+                lastLoad = parseInt(content.getElementById(HIDDEN_COUNTER_ID)?.textContent)
+                gameOver = !!content.getElementById(GAME_OVER_ID);
 
-                frameQueue.push({content, end: !response.ok || isGameOver});
-
-                if (isGameOver) {
-                    break;
-                }
+                frameQueue.push({content, end: !response.ok || gameOver});
             } catch (e) {
                 frameQueue.push({html_text: `<h1>Error</h1><p>Can't load world: ${e.message}</p>`, end: true});
                 break;
@@ -182,6 +193,7 @@
             }
 
             const {content, end} = frameQueue.shift();
+
             showWorld(content);
 
             if (end) {
@@ -203,8 +215,10 @@
     }
 
     function showWorld(content) {
+        lastShow = parseInt(content.getElementById(HIDDEN_COUNTER_ID)?.textContent);
+        updateUrl();
         if (counter) {
-            counter.textContent = parseInt(content.getElementById(HIDDEN_COUNTER_ID)?.textContent).toString();
+            counter.textContent = lastShow.toString();
         }
         worldContainer.replaceChild(content, worldContainer.firstElementChild)
     }
