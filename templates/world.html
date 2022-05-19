@@ -1,63 +1,87 @@
-<div id="hiddenCounter" class="hidden">{{ cells.serial }}</div>
-<div class="hidden">{{ cells.__class__.__name__ }}</div>
-{% if game_over -%}
-    <h1 id="gameOver">GAME OVER</h1>
-{% else -%}
-    <br>
-{% endif -%}
+<div>
+    <div id="hiddenCounter" class="hidden">{{ cells.serial }}</div>
+    <div class="hidden">{{ cells.__class__.__name__ }}</div>
+    {% if game_over -%}
+        <h1 id="gameOver">GAME OVER</h1>
+    {% else -%}
+        <br>
+    {% endif -%}
 
-{% set size = (1024 // cells.width, 768 // cells.height) | min %}
+    {% if wss %}
+        {% set size = (wss[0] * 2 // (cells.width * 3), wss[1] * 2 // (cells.height * 3)) | min %}
+    {% else %}
+        {% set size = (800 // cells.width, 480 // cells.height) | min %}
+    {% endif %}
 
-{% if size < 8 %}
-    {% set size = 8 %}
-{% elif size > 32 %}
-    {% set size = 32 %}
-{% endif %}
+    {% if size < 8 %}
+        {% set size = 8 %}
+    {% elif size > 32 %}
+        {% set size = 32 %}
+    {% endif %}
 
-{% set cell_width = 'width:{}px;padding:0'.format(size) %}
-{% set cell_height = 'height:{}px;padding:0'.format(size) %}
-{% set cell_width_height = 'width:{}px;height:{}px;padding:0'.format(size, size) %}
+    {% set cell_width = 'width:{}px;padding:0'.format(size) %}
+    {% set cell_height = 'height:{}px;padding:0'.format(size) %}
+    {% set cell_width_height = 'width:{}px;height:{}px;padding:0'.format(size, size) %}
 
-<table class="world" style="font-family: monospace;">
-    {% set previous = cells.previous -%}
-    <tr>
-        {% if cells.is_live_cell(0, 0) -%}
-            <td class="cell living-cell"><div style="{{ cell_width_height }}">X</div></td>
-        {% elif previous and previous.is_live_cell(0, 0) -%}
-            <td class="cell dead-cell"><div style="{{ cell_width_height }}">D</div></td>
-        {% else -%}
-            <td class="cell"><div style="{{ cell_width_height }}">_</div></td>
-        {% endif -%}
-
-        {% for col in range(1, cells.width) -%}
-            {% if cells.is_live_cell(0, col) -%}
-                <td class="cell living-cell"><div style="{{ cell_width }}">X</div></td>
-            {% elif previous and previous.is_live_cell(0, col) -%}
-                <td class="cell dead-cell"><div style="{{ cell_width }}">D</div></td>
-            {% else -%}
-                <td class="cell"><div style="{{ cell_width }}">_</div></td>
-            {% endif -%}
-        {% endfor -%}
-    </tr>
-    {% for row in range(1, cells.height) -%}
+    <table class="world" style="font-family: monospace;">
+        {% set previous = cells.previous -%}
         <tr>
-            {% if cells.is_live_cell(row, 0) -%}
-                <td class="cell living-cell"><div style="{{ cell_height }}">X</div></td>
-            {% elif previous and previous.is_live_cell(row, 0) -%}
-                <td class="cell dead-cell"><div style="{{ cell_height }}">D</div></td>
+            {% if cells.is_live_cell(0, 0) -%}
+                <td class="cell living-cell">
+                    <div style="{{ cell_width_height }}">X</div>
+                </td>
+            {% elif previous and previous.is_live_cell(0, 0) -%}
+                <td class="cell dead-cell">
+                    <div style="{{ cell_width_height }}">D</div>
+                </td>
             {% else -%}
-                <td class="cell"><div style="{{ cell_height }}">_</div></td>
+                <td class="cell">
+                    <div style="{{ cell_width_height }}">_</div>
+                </td>
             {% endif -%}
 
             {% for col in range(1, cells.width) -%}
-                {% if cells.is_live_cell(row, col) -%}
-                    <td class="cell living-cell">X</td>
-                {% elif previous and previous.is_live_cell(row, col) -%}
-                    <td class="cell dead-cell">D</td>
+                {% if cells.is_live_cell(0, col) -%}
+                    <td class="cell living-cell">
+                        <div style="{{ cell_width }}">X</div>
+                    </td>
+                {% elif previous and previous.is_live_cell(0, col) -%}
+                    <td class="cell dead-cell">
+                        <div style="{{ cell_width }}">D</div>
+                    </td>
                 {% else -%}
-                    <td class="cell">_</td>
+                    <td class="cell">
+                        <div style="{{ cell_width }}">_</div>
+                    </td>
                 {% endif -%}
             {% endfor -%}
         </tr>
-    {% endfor -%}
-</table>
+        {% for row in range(1, cells.height) -%}
+            <tr>
+                {% if cells.is_live_cell(row, 0) -%}
+                    <td class="cell living-cell">
+                        <div style="{{ cell_height }}">X</div>
+                    </td>
+                {% elif previous and previous.is_live_cell(row, 0) -%}
+                    <td class="cell dead-cell">
+                        <div style="{{ cell_height }}">D</div>
+                    </td>
+                {% else -%}
+                    <td class="cell">
+                        <div style="{{ cell_height }}">_</div>
+                    </td>
+                {% endif -%}
+
+                {% for col in range(1, cells.width) -%}
+                    {% if cells.is_live_cell(row, col) -%}
+                        <td class="cell living-cell">X</td>
+                    {% elif previous and previous.is_live_cell(row, col) -%}
+                        <td class="cell dead-cell">D</td>
+                    {% else -%}
+                        <td class="cell">_</td>
+                    {% endif -%}
+                {% endfor -%}
+            </tr>
+        {% endfor -%}
+    </table>
+</div>

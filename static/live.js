@@ -206,7 +206,7 @@
         if (counter) {
             counter.textContent = parseInt(content.getElementById(HIDDEN_COUNTER_ID)?.textContent).toString();
         }
-        worldContainer.replaceChildren(content);
+        worldContainer.replaceChild(content, worldContainer.firstElementChild)
     }
 
 })();

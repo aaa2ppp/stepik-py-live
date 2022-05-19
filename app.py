@@ -4,7 +4,7 @@ from flask import Flask, render_template, request, redirect, url_for
 from forms import WorldSizeForm
 
 from game_of_life import GameOfLife, NoCellGenerationError
-from helpers import html_prettify, html_minify, open_session
+from helpers import open_session, get_window_screen_size
 from util.session import SessionService
 
 app = Flask(__name__)
@@ -15,7 +15,7 @@ if app.debug:
 
 app.jinja_options["trim_blocks"] = True
 app.jinja_options["lstrip_blocks"] = True
-app.jinja_options["keep_trailing_newline"] = True
+app.jinja_options["keep_trailing_newline"] = False
 
 # Tell browser to don't cache anything
 if int(os.environ.get('NO_CACHE', "0")):
@@ -59,7 +59,8 @@ def live(context):
     try:
         game = GameOfLife(context)
         cells = game.get_next_generation()
-        return render_template("live.html", cells=cells, game_over=game.is_over(), disable_js=context.get('disable_js'))
+        return render_template("live.html", cells=cells, game_over=game.is_over(), disable_js=context.get('disable_js'),
+                               wss=get_window_screen_size())
     except NoCellGenerationError:
         return no_cell_generation_error_message()
 
@@ -70,7 +71,7 @@ def world(context):
     try:
         game = GameOfLife(context)
         cells = game.get_next_generation()
-        return render_template("world.html", cells=cells, game_over=game.is_over())
+        return render_template("world.html", cells=cells, game_over=game.is_over(), wss=get_window_screen_size())
     except NoCellGenerationError:
         return no_cell_generation_error_message()
 

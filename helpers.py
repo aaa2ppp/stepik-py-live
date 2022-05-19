@@ -1,5 +1,3 @@
-import bs4
-import htmlmin
 from functools import wraps
 
 from flask import request, url_for, redirect
@@ -27,26 +25,10 @@ def open_session(f):
     return decorated_function
 
 
-def html_prettify(f):
-    """
-    https://stackoverflow.com/questions/13587531/minify-html-output-from-flask-application-with-jinja2-templates
-    """
+def get_window_screen_size():
+    try:
+        window_screen_size = tuple(map(int, request.cookies.get("wss", "1024x768").split('x')))
+    except:
+        window_screen_size = (1024, 640)
 
-    @wraps(f)
-    def wrapped(*args, **kwargs):
-        soup = bs4.BeautifulSoup(f(*args, **kwargs), 'html.parser')
-        return soup.prettify()
-
-    return wrapped
-
-
-def html_minify(f):
-    """
-    https://stackoverflow.com/questions/13587531/minify-html-output-from-flask-application-with-jinja2-templates
-    """
-
-    @wraps(f)
-    def wrapped(*args, **kwargs):
-        return htmlmin.minify(f(*args, **kwargs), remove_empty_space=True, remove_comments=True)
-
-    return wrapped
+    return window_screen_size
