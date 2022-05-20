@@ -4,7 +4,7 @@ from flask import Flask, render_template, request, redirect, url_for
 from forms import WorldSizeForm
 
 from game_of_life import GameOfLife, NoGenerationError
-from helpers import open_session, get_window_screen_size
+from helpers import open_session, get_window_screen_size, invalid_parameter_message
 from util.session import SessionService
 
 app = Flask(__name__)
@@ -32,9 +32,11 @@ def check_session():
     if SessionService().has_session():
         return redirect(request.args.get('next', url_for("index")))
     else:
-        code = 403
-        title = "Create session error"
-        message = "Can't create session. This usually happens if your browser blocks cookies."
+        code = 401
+        title = "Ошибка создания сессии"
+        message = ("Я не могу создать сессию. Такое может происходит, если запрещены куки." +
+                   f" Пожалуйста, проверьте, что в вашем браузере разрешены куки для {request.host_url[:-1]}.")
+
         return render_template("error.html", title=title, message=message, code=code), code
 
 
@@ -45,13 +47,13 @@ def index(context):
 
     if form.validate_on_submit():
         GameOfLife(context).create_new_life(height=form.height.data, width=form.width.data)
-
-        if form.disable_js.data:
+        if form.js_off.data:
             return redirect(url_for("live",
                                     js="off",
                                     serial=form.serial.data))
         else:
             return redirect(url_for("live",
+                                    js="on",
                                     autoupdate=form.autoupdate.data,
                                     update_period=form.update_period.data,
                                     serial=form.serial.data))
@@ -59,31 +61,15 @@ def index(context):
         return render_template("index.html", form=form)
 
 
-def render_live(context, template: str, **kwargs):
-    try:
-        serial = request.args.get('serial')
-        if serial is not None:
-            serial = int(serial)
-            if serial < 0:
-                raise ValueError("Serial must be positive integer number")
-    except Exception as err:
-        return invalid_parameter_value_message('serial', str(err))
-
-    try:
-        game = GameOfLife(context)
-        generation = game.get_next_generation() if serial is None else game.get_generation(serial)
-    except NoGenerationError:
-        return no_generation_error_message()
-
-    wss = get_window_screen_size()
-    return render_template(template, generation=generation, wss=wss, **kwargs)
-
-
 @app.route("/live")
 @open_session
 def live(context):
     js = request.args.get('js')
-    return render_live(context, "live.html", disable_js=js is not None and js in ("no", "off", "false", "0"))
+    if js is not None and js in ("no", "off", "false", "0"):
+        js = False
+    else:
+        js = True
+    return render_live(context, "live.html", js=js)
 
 
 @app.route("/world")
@@ -92,29 +78,44 @@ def world(context):
     return render_live(context, "world.html")
 
 
-def invalid_parameter_value_message(param_name: str, err_message: str):
-    code = 500
-    message = f"Недопустимое значение параметра '{param_name}': {err_message}"
-    return render_template("error.html", message=message, code=code), code
+def render_live(context, template: str, **kwargs):
+    serial = request.args.get('serial')
+    if serial is not None:
+        try:
+            serial = int(serial)
+        except ValueError:
+            return invalid_parameter_message("serial", "Должно быть целое число")
+
+        if serial < 0:
+            return invalid_parameter_message("serial", "Должно быть больше 0")
+
+    try:
+        game = GameOfLife(context)
+        generation = game.get_next_generation() if serial is None else game.get_generation(serial)
+    except NoGenerationError:
+        code = 500
+        message = "Нет ни одного поколения клеток. Пожалуйста создайте новую жизнь."
+        return render_template("error.html", message=message, code=code), code
+
+    wss = get_window_screen_size()
+    return render_template(template, generation=generation, wss=wss, **kwargs)
 
 
-def no_generation_error_message():
-    code = 500
-    message = ("Мне очень жаль, но произошла ошибка. Нет ни одного поколения клеток." +
-               " Пожалуйста создайте новую жизнь.")
-    return render_template("error.html", message=message, code=code), code
+@app.route("/nothing_works")
+def nothing_works():
+    return render_template("message-for-reviewers.html")
 
 
 # The following two direct links are FOR TESTS ONLY
 
-@app.route("/new-live")
+@app.route("/new_live")
 @open_session
 def new_live(context):
     GameOfLife(context).create_new_life(25, 25)
     return redirect(url_for("live", **request.args))
 
 
-@app.route("/new-world")
+@app.route("/new_world")
 @open_session
 def new_world(context):
     GameOfLife(context).create_new_life(25, 25)

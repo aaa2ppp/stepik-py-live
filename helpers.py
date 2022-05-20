@@ -1,6 +1,6 @@
 from functools import wraps
 
-from flask import request, url_for, redirect
+from flask import request, url_for, redirect, render_template
 
 from util.session import SessionService
 
@@ -27,8 +27,15 @@ def open_session(f):
 
 def get_window_screen_size():
     try:
-        window_screen_size = tuple(map(int, request.cookies.get("wss", "1024x768").split('x')))
-    except:
-        window_screen_size = (1024, 640)
+        return tuple(map(int, request.cookies.get("wss").split('x')))
+    except (AttributeError, ValueError):
+        return 1024, 768
 
-    return window_screen_size
+
+def invalid_parameter_message(param_name: str, err_message: str):
+    code = 500
+    message = f"Недопустимое значение параметра '{param_name}': {err_message}"
+    return render_template("error.html", message=message, code=code), code
+
+
+

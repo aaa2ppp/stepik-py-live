@@ -1,13 +1,5 @@
-{% extends "base.html" %}
+{% extends "message.html" %}
 
-{% block app_content %}
-    <h1>
-        {% if title %}
-            {{ title }}
-        {% else %}
-            Ошибка
-        {% endif %}
-    </h1>
-    <p>{{ message }}</p>
-{% endblock %}
-
+{% block title -%}
+    Ошибка
+{%- endblock %}

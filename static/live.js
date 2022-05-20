@@ -50,8 +50,7 @@
         updatePeriod = 100;
     }
 
-    let _autoupdate = _params.has(AUTO_UPDATE_PARAM) &&
-        ["no", "off", "false", "0"].indexOf(_params.get(AUTO_UPDATE_PARAM).toLowerCase()) === -1;
+    let _autoupdate = _params.has(AUTO_UPDATE_PARAM) && ["no", "off", "false", "0"].indexOf(_params.get(AUTO_UPDATE_PARAM).toLowerCase()) === -1;
 
     _params = null;
 
@@ -153,33 +152,73 @@
     }
 
     async function loadWorldLoop(loopId) {
-        let gameOver = false;
 
-        while (loopId === currentUpdateLoopId && !gameOver) {
+        while (loopId === currentUpdateLoopId) {
+
             if (frameQueue.length >= FRAME_QUEUE_SIZE) {
-                await sleep(Math.floor(updatePeriod / 4));
+                await sleep(updatePeriod);
                 continue;
             }
 
-            try {
-                lastLoad++;
-                const url = isNaN(lastLoad) ? WORLD_URL : WORLD_URL + `?serial=${lastLoad}`;
-                const response = await fetch(url);
-                const html_text = await response.text();
+            const frame = createFrame(await loadWorld(lastLoad + 1));
+            frameQueue.push(frame);
 
-                const template = document.createElement('template');
-                template.innerHTML = html_text;
-                const content = template.content;
-                lastLoad = parseInt(content.getElementById(HIDDEN_COUNTER_ID)?.textContent)
-                gameOver = !!content.getElementById(GAME_OVER_ID);
+            if (!isNaN(frame.serial)) {
+                lastLoad = frame.serial;
+            }
 
-                frameQueue.push({content, end: !response.ok || gameOver});
-            } catch (e) {
-                frameQueue.push({html_text: `<h1>Error</h1><p>Can't load world: ${e.message}</p>`, end: true});
+            if (frame.end) {
                 break;
             }
         }
     }
+
+    async function loadWorld(serial) {
+        let success;
+        let html_text;
+
+        try {
+            const url = isNaN(serial) ? WORLD_URL : WORLD_URL + `?serial=${serial}`;
+            const response = await fetch(url);
+            success = response.ok;
+            html_text = await response.text();
+        } catch (e) {
+            html_text = html_error_message('Ошибка сети', `Я не могу получить ${serial} поколение жизни: ${e.message}`);
+            success = false;
+        }
+
+        return [success, html_text];
+    }
+
+    function html_error_message(title, message) {
+        // see templates/message.html
+        return `<div class="text"><div class="column centered"><h1>${title}</h1><p>${message}</p><hr></div></div>`;
+    }
+
+    function createFrame([success, html_text]) {
+        let serial, content, end;
+
+        const template = document.createElement('template');
+        template.innerHTML = html_text;
+        content = template.content;
+
+        if (success) {
+            end = !!content.getElementById(GAME_OVER_ID);
+            serial = parseInt(content.getElementById(HIDDEN_COUNTER_ID)?.textContent);
+        } else {
+            end = true;
+            serial = NaN;
+            const app_content = template.content.querySelector(".app_content");
+            if (app_content !== null) {
+                content = new DocumentFragment();
+                content.append(app_content);
+            }
+        }
+
+        return {serial, content, end};
+    }
+
+    // ------------------------------------------------------------------------
 
     async function showWorldLoop(loopId) {
         let startTime = Date.now();
@@ -191,14 +230,16 @@
                 continue;
             }
 
-            const {content, end} = frameQueue.shift();
+            const frame = frameQueue.shift();
+            showWorld(frame);
+            lastShow = frame.serial;
 
-            showWorld(content);
-
-            if (end) {
+            if (frame.end) {
                 setAutoUpdate(false);
                 break;
             }
+
+            updateUrl();
 
             const endTime = Date.now();
             const timeout = updatePeriod - (endTime - startTime);
@@ -213,13 +254,11 @@
         }
     }
 
-    function showWorld(content) {
-        lastShow = parseInt(content.getElementById(HIDDEN_COUNTER_ID)?.textContent);
-        updateUrl();
+    function showWorld({content, serial}) {
         if (counter) {
-            counter.textContent = lastShow.toString();
+            counter.textContent = serial.toString();
         }
-        worldContainer.replaceChild(content, worldContainer.firstElementChild)
+        worldContainer.replaceChild(content, worldContainer.firstElementChild);
     }
 
 })();

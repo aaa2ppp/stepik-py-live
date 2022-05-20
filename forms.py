@@ -38,9 +38,9 @@ class WorldSizeForm(FlaskForm):
                                          (500, "0.5 сек"), (250, "0.25 сек"), (100, "0.1 сек")),
                                 coerce=int)
 
-    disable_js = BooleanField("Не загружать js скрипты",
-                              default=lambda: _get_default_value('disable_js', False),
-                              description="При включении этой опции автоматическое обновление работать не будет.")
+    js_off = BooleanField("Не загружать js скрипты",
+                          default=lambda: _get_default_value('js_off', False),
+                          description="При включении этой опции автоматическое обновление работать не будет.")
 
     submit = SubmitField("Создать жизнь")
 
@@ -56,7 +56,7 @@ class WorldSizeForm(FlaskForm):
         result = super().validate_on_submit()
         if result:
             # TODO: How do get a list of form fields?
-            names = ("height", "width", "serial", "autoupdate", "update_period", "disable_js")
+            names = ("height", "width", "serial", "autoupdate", "update_period", "js_off")
             for name in names:
                 self._context_data[name] = getattr(self, name).data
         return result

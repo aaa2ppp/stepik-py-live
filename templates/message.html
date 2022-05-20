@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block app_content %}
+    <div class="text">
+        <div class="column centered">
+            <h1>{% block title -%}{{ title }}{% endblock %}</h1>
+            {% block message -%}
+                <p>{{ message }}</p>
+            {%- endblock %}
+            <hr>
+        </div>
+    </div>
+{% endblock %}

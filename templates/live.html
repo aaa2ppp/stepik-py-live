@@ -15,14 +15,19 @@
             </td>
         </tr>
     </table>
+
     <div id="worldContainer" class="world-container">
         {% include "world.html" %}
     </div>
 {% endblock %}
 
+{% block navigation %}
+    <p><a href="{{ url_for('nothing_works') }}">Ничего не работает</a></p>
+{% endblock %}
+
 {% block scripts %}
     {{ super() }}
-    {% if not disable_js %}
+    {% if js -%}
         <script src="{{ url_for('static', filename='live.js') }}"></script>
-    {% endif %}
+    {%- endif %}
 {% endblock %}

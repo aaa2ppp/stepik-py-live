@@ -6,7 +6,7 @@ from typing import Optional
 from util.bitarray import makeBitArray, setBit, testBit
 from util.session import SessionContext
 
-_duplicate_search_depth = 10
+_duplicate_search_depth = 4
 
 """
 1. Any live cell with two or three live neighbours survives.
@@ -17,8 +17,6 @@ https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life#Rules
 """
 
 _neighbors_coords = ((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1))
-_neighbors_rows = (-1, -1, -1,  0, 0,  1, 1, 1)
-_neighbors_cols = (-1,  0,  1, -1, 1, -1, 0, 1)
 
 
 def _is_live_cell(previous_generation: 'CellGeneration', row: int, col: int) -> bool:
@@ -33,11 +31,6 @@ def _is_live_cell(previous_generation: 'CellGeneration', row: int, col: int) -> 
 def _count_neighbors(generation: 'CellGeneration', row: int, col: int) -> int:
     height = generation.height
     width = generation.width
-
-    # count = 0
-    # for offset in _neighbors_coords:
-    #     count += generation.is_live_cell((row + offset[0]) % height, (col + offset[1]) % width)
-    # return count
 
     def is_live_neighbor(offset):
         return generation.is_live_cell(
@@ -54,7 +47,8 @@ class CellGeneration:
         self._previous = previous
         self._serial = serial
         self._world = self._create_world(height, width)
-        self._is_over = False
+        self._is_empty = None
+        self._is_over = None
 
     @property
     def height(self) -> int:
@@ -77,15 +71,29 @@ class CellGeneration:
         return self._world
 
     @property
+    def is_empty(self):
+        if self._is_empty is not None:
+            return self._is_empty
+
+        for x in self._world:
+            if x != 0:
+                return False
+        return True
+
+    @property
     def is_over(self):
-        if self._is_over:
-            return True
+        if self._is_over is not None:
+            return self._is_over
 
-        if sum(self._world) == 0:
-            self._is_over = True
-            return True
+        # NONE: Disable check for empty to avoid redundant calculations.
+        #  In this case, the game will be over on the next generation.
+        #  Because if a generation is empty, then the next generation will also be empty.
 
-        # NOTE: To avoid excessive load, we limit the history of generations.
+        # if self.is_empty:
+        #     self._is_over = True
+        #     return True
+
+        # NOTE: To avoid redundant calculations, we limit the search depth.
         last = self
         prev = last
         for _ in range(_duplicate_search_depth):
@@ -93,10 +101,11 @@ class CellGeneration:
             if prev is None:
                 return False
 
-            if prev.world == last.world:
+            if prev._world == last._world:
                 self._is_over = True
                 return True
 
+        self._is_over = False
         return False
 
     def _create_world(self, height, width):
