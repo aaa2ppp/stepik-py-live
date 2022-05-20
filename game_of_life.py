@@ -6,39 +6,45 @@ from typing import Optional
 from util.bitarray import makeBitArray, setBit, testBit
 from util.session import SessionContext
 
-_MAX_HISTORY_LENGTH = 10
+_duplicate_search_depth = 10
 
-class GameOfLiveRules:
-    """
-    1. Any live cell with two or three live neighbours survives.
-    2. Any dead cell with three live neighbours becomes a live cell.
-    3. All other live cells die in the next generation. Similarly, all other dead cells stay dead.
+"""
+1. Any live cell with two or three live neighbours survives.
+2. Any dead cell with three live neighbours becomes a live cell.
+3. All other live cells die in the next generation. Similarly, all other dead cells stay dead.
 
-    https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life#Rules
-    """
+https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life#Rules
+"""
 
-    _neighbors_coords = ((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1))
+_neighbors_coords = ((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1))
+_neighbors_rows = (-1, -1, -1,  0, 0,  1, 1, 1)
+_neighbors_cols = (-1,  0,  1, -1, 1, -1, 0, 1)
 
-    @classmethod
-    def is_live_cell(cls, previous_generation: 'CellGeneration', row: int, col: int) -> bool:
-        number_of_neighbors = cls.count_neighbors(previous_generation, row, col)
 
-        if previous_generation.is_live_cell(row, col):
-            return number_of_neighbors in (2, 3)
-        else:
-            return number_of_neighbors == 3
+def _is_live_cell(previous_generation: 'CellGeneration', row: int, col: int) -> bool:
+    number_of_neighbors = _count_neighbors(previous_generation, row, col)
 
-    @classmethod
-    def count_neighbors(cls, generation: 'CellGeneration', row: int, col: int) -> int:
-        height = generation.height
-        width = generation.width
+    if previous_generation.is_live_cell(row, col):
+        return number_of_neighbors in (2, 3)
+    else:
+        return number_of_neighbors == 3
 
-        def is_live_neighbor(offset):
-            return generation.is_live_cell(
-                (row + offset[0]) % height,
-                (col + offset[1]) % width)
 
-        return reduce(add, map(is_live_neighbor, cls._neighbors_coords), 0)
+def _count_neighbors(generation: 'CellGeneration', row: int, col: int) -> int:
+    height = generation.height
+    width = generation.width
+
+    # count = 0
+    # for offset in _neighbors_coords:
+    #     count += generation.is_live_cell((row + offset[0]) % height, (col + offset[1]) % width)
+    # return count
+
+    def is_live_neighbor(offset):
+        return generation.is_live_cell(
+            (row + offset[0]) % height,
+            (col + offset[1]) % width)
+
+    return reduce(add, map(is_live_neighbor, _neighbors_coords), 0)
 
 
 class CellGeneration:
@@ -82,7 +88,7 @@ class CellGeneration:
         # NOTE: To avoid excessive load, we limit the history of generations.
         last = self
         prev = last
-        for _ in range(_MAX_HISTORY_LENGTH):
+        for _ in range(_duplicate_search_depth):
             prev = prev.previous
             if prev is None:
                 return False
@@ -117,13 +123,12 @@ class NextCellGeneration(CellGeneration):
 
     def _create_world(self, height, width):
         prev = self.previous
-        is_live = GameOfLiveRules.is_live_cell
         world = makeBitArray(height * width)
 
         i = 0
         for row in range(height):
             for col in range(width):
-                if is_live(prev, row, col):
+                if _is_live_cell(prev, row, col):
                     setBit(world, i)
                 i += 1
         return world
@@ -149,44 +154,46 @@ class GameOfLife(metaclass=GameOfLifeMeta):
     max_history_length = 10
 
     def __init__(self):
-        self._cell_generation = None
+        self._last_generation = None
         self._is_new_life = False
         self._is_over = True
         self._empty_world = None
+        self._items = []
 
     def create_new_life(self, height: int = 20, width: int = 20) -> None:
         self._empty_world = makeBitArray(height * width)
-        self._cell_generation: CellGeneration = RandomCellGeneration(height, width)
+        self._last_generation: CellGeneration = RandomCellGeneration(height, width)
         self._is_new_life = True
         self._is_over = False
+        self._items = [self._last_generation]
 
     def get_next_generation(self) -> CellGeneration:
-        if self._cell_generation is None:
+        if self._last_generation is None:
             raise NoGenerationError('First need to call the create_new_life function')
 
         if self._is_new_life:
             self._is_new_life = False
         elif not self.is_over():
-            self._cell_generation = NextCellGeneration(self._cell_generation)
+            self._last_generation = NextCellGeneration(self._last_generation)
+            self._items.append(self._last_generation)
 
-        return self._cell_generation
+        return self._last_generation
 
     def get_generation(self, serial: int) -> CellGeneration:
-        if self._cell_generation is None:
+        if self._last_generation is None:
             raise NoGenerationError('First need to call the create_new_life function')
 
         if serial < 0:
             raise GameOfLifeError('Serial must be positive number')
 
-        generation = self._cell_generation
+        if serial < len(self._items):
+            return self._items[serial]
 
-        while generation.previous is not None and generation.serial > serial:
-            generation = generation.previous
-
+        generation = self._last_generation
         while generation.serial < serial and not self.is_over():
             generation = self.get_next_generation()
 
         return generation
 
     def is_over(self):
-        return self._cell_generation.is_over
+        return self._last_generation.is_over

@@ -14,35 +14,33 @@ class WorldSizeForm(FlaskForm):
         super().__init__()
         self._context_data = context.get_dict(self.__class__)
 
-    height = IntegerField(
-        "Высота мира",
-        default=lambda: _get_default_value('height', _WORLD_DEFAULT_SIZE),
-        validators=[
-            InputRequired(),
-            NumberRange(_WORLD_MIN_SIZE, _WORLD_MAX_SIZE)
-        ]
-    )
+    height = IntegerField("Высота мира",
+                          default=lambda: _get_default_value('height', _WORLD_DEFAULT_SIZE),
+                          validators=[InputRequired(),
+                                      NumberRange(_WORLD_MIN_SIZE, _WORLD_MAX_SIZE)])
 
-    width = IntegerField(
-        "Ширина мира",
-        default=lambda: _get_default_value('width', _WORLD_DEFAULT_SIZE),
-        validators=[
-            InputRequired(),
-            NumberRange(_WORLD_MIN_SIZE, _WORLD_MAX_SIZE)
-        ]
-    )
+    width = IntegerField("Ширина мира",
+                         default=lambda: _get_default_value('width', _WORLD_DEFAULT_SIZE),
+                         validators=[InputRequired(),
+                                     NumberRange(_WORLD_MIN_SIZE, _WORLD_MAX_SIZE)])
 
-    update_period = SelectField(
-        "Период обновления",
-        choices=((2000, "2 сек"), (1000, "1 сек"), (750, "0.75 сек"), (500, "0.5 сек"), (250, "0.25 сек")),
-        coerce=int,
-        default=lambda: _get_default_value('update_period', 1000)
-    )
+    serial = IntegerField("Перейти к поколению",
+                          default=lambda: _get_default_value('serial', 0),
+                          validators=[InputRequired(),
+                                      NumberRange(min=0, max=9999)])
 
-    disable_js = BooleanField(
-        "Не загружать js скрипты",
-        default=lambda: _get_default_value('disable_js', False)
-    )
+    autoupdate = BooleanField("Автоматическое обновление",
+                              default=lambda: _get_default_value('autoupdate', True))
+
+    update_period = SelectField("Период обновления",
+                                default=lambda: _get_default_value('update_period', 1000),
+                                choices=((2000, "2 сек"), (1000, "1 сек"),
+                                         (500, "0.5 сек"), (250, "0.25 сек"), (100, "0.1 сек")),
+                                coerce=int)
+
+    disable_js = BooleanField("Не загружать js скрипты",
+                              default=lambda: _get_default_value('disable_js', False),
+                              description="При включении этой опции автоматическое обновление работать не будет.")
 
     submit = SubmitField("Создать жизнь")
 
@@ -57,15 +55,15 @@ class WorldSizeForm(FlaskForm):
     def validate_on_submit(self):
         result = super().validate_on_submit()
         if result:
-            self._context_data['height'] = self.height.data
-            self._context_data['width'] = self.width.data
-            self._context_data['update_period'] = self.update_period.data
-            self._context_data['disable_js'] = self.disable_js.data
+            # TODO: How do get a list of form fields?
+            names = ("height", "width", "serial", "autoupdate", "update_period", "disable_js")
+            for name in names:
+                self._context_data[name] = getattr(self, name).data
         return result
 
 
 def _get_default_value(name: str, default):
-    # TODO: It's very expensive. This is a workaround. But so far I don't understand how to pass
-    #  the session context data to the form fields in the initiator of the form object.
+    # TODO: This is a workaround. I don't understand how to pass the session context data
+    #  to the form fields in the initiator of the form object.
     context_data = SessionService().get_session_context().get_dict(WorldSizeForm)
     return context_data.get(name, default)

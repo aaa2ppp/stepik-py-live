@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block app_content %}
-    <!-- TODO: replace table to div -->
+    {# TODO: replace table to div #}
     <table class="centered">
         <tr valign="middle">
             <td>
@@ -11,7 +11,7 @@
                 <div id="counter" class="counter">{{ generation.serial }}</div>
             </td>
             <td>
-                <a id="refreshButton" href="?serial={{ generation.serial + 1 }}" class="btn btn-info">Обновить</a>
+                <a id="refreshButton" href="?js=off&serial={{ generation.serial + 1 }}" class="btn btn-info">Обновить</a>
             </td>
         </tr>
     </table>

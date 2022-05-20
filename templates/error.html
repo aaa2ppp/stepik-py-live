@@ -1,19 +1,13 @@
-<!DOCTYPE html>
+{% extends "base.html" %}
 
-<html lang="ru">
-<head>
-    <meta charset="utf-8">
-    <title>Error</title>
-</head>
-<body>
-<h1>
-    {% if title %}
-        {{ title }}
-    {% else %}
-        Error
-    {% endif %}
-</h1>
-<p>{{ message }}</p>
-</body>
-</html>
+{% block app_content %}
+    <h1>
+        {% if title %}
+            {{ title }}
+        {% else %}
+            Ошибка
+        {% endif %}
+    </h1>
+    <p>{{ message }}</p>
+{% endblock %}
 

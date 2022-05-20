@@ -38,16 +38,23 @@ def check_session():
         return render_template("error.html", title=title, message=message, code=code), code
 
 
-@app.route("/", methods=["GET", "POST"])
+@app.route("/", methods=("GET", "POST"))
 @open_session
 def index(context):
     form = WorldSizeForm(context)
+
     if form.validate_on_submit():
         GameOfLife(context).create_new_life(height=form.height.data, width=form.width.data)
+
         if form.disable_js.data:
-            return redirect(url_for("live", js="off"))
+            return redirect(url_for("live",
+                                    js="off",
+                                    serial=form.serial.data))
         else:
-            return redirect(url_for("live", autoupdate="on", update_period=form.update_period.data))
+            return redirect(url_for("live",
+                                    autoupdate=form.autoupdate.data,
+                                    update_period=form.update_period.data,
+                                    serial=form.serial.data))
     else:
         return render_template("index.html", form=form)
 
@@ -68,16 +75,15 @@ def render_live(context, template: str, **kwargs):
     except NoGenerationError:
         return no_generation_error_message()
 
-    return render_template(template, generation=generation, wss=get_window_screen_size(), **kwargs)
+    wss = get_window_screen_size()
+    return render_template(template, generation=generation, wss=wss, **kwargs)
 
 
 @app.route("/live")
 @open_session
 def live(context):
-    js = request.args.get('serial')
-    if js is not None:
-        js = js.lower()
-    return render_live(context, "live.html", disable_js=(js is not None and js in ("no", "off", "false", "0")))
+    js = request.args.get('js')
+    return render_live(context, "live.html", disable_js=js is not None and js in ("no", "off", "false", "0"))
 
 
 @app.route("/world")
@@ -88,14 +94,14 @@ def world(context):
 
 def invalid_parameter_value_message(param_name: str, err_message: str):
     code = 500
-    message = f"Value of {param_name} is invalid: {err_message}"
+    message = f"Недопустимое значение параметра '{param_name}': {err_message}"
     return render_template("error.html", message=message, code=code), code
 
 
 def no_generation_error_message():
     code = 500
-    message = ("I'm sorry, but there was an error. There is no generation of cells." +
-               " Please create new life.")
+    message = ("Мне очень жаль, но произошла ошибка. Нет ни одного поколения клеток." +
+               " Пожалуйста создайте новую жизнь.")
     return render_template("error.html", message=message, code=code), code
 
 
@@ -105,15 +111,13 @@ def no_generation_error_message():
 @open_session
 def new_live(context):
     GameOfLife(context).create_new_life(25, 25)
-    context.data['disable_js'] = True
-    return redirect(url_for("live"))
+    return redirect(url_for("live", **request.args))
 
 
 @app.route("/new-world")
 @open_session
 def new_world(context):
     GameOfLife(context).create_new_life(25, 25)
-    context.data['disable_js'] = True
     return redirect(url_for("world"))
 
 

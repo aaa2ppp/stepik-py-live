@@ -38,27 +38,26 @@
     const frameQueue = [];
     let lastLoad = parseInt(counter?.textContent);
     let lastShow = lastLoad;
-    let gameOverLoaded = !!document.getElementById(GAME_OVER_ID);
 
     let autoUpdateEnabled = undefined;
     let currentUpdateLoopId = 0;
 
-    let _url = new URL(location);
+    let _params = new URL(location).searchParams;
 
-    let updatePeriod = parseInt(_url.searchParams.get(UPDATE_PERIOD_PARAM)) || 1000;
+    let updatePeriod = parseInt(_params.get(UPDATE_PERIOD_PARAM)) || 1000;
     if (updatePeriod < 100) {
         console.warn(`Too small value of ${UPDATE_PERIOD_PARAM}=${updatePeriod}. Set it to 100`);
         updatePeriod = 100;
     }
 
-    let _autoupdate = _url.searchParams.has(AUTO_UPDATE_PARAM) &&
-        ["no", "off", "false", "0"].indexOf(_url.searchParams.get(AUTO_UPDATE_PARAM)) === -1;
+    let _autoupdate = _params.has(AUTO_UPDATE_PARAM) &&
+        ["no", "off", "false", "0"].indexOf(_params.get(AUTO_UPDATE_PARAM).toLowerCase()) === -1;
 
-    _url = null;
+    _params = null;
 
     setAutoUpdate(_autoupdate && !document.getElementById(GAME_OVER_ID));
 
-    exitButton?.addEventListener('clist', () => setAutoUpdate(false));
+    exitButton?.addEventListener('click', () => setAutoUpdate(false));
 
     refreshButton?.addEventListener('click', (event) => {
         setAutoUpdate(!autoUpdateEnabled);
