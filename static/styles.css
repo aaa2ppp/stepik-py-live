@@ -28,6 +28,11 @@
     background: lightgreen;
 }
 
+.surviving-cell {
+    color: green;
+    background: green;
+}
+
 .dead-cell {
     color: darkred;
     background: darkred;
@@ -42,7 +47,7 @@
 }
 
 .column {
-    width: 86ch
+    width: 80ch
 }
 
 .error {

@@ -27,12 +27,19 @@ def makeBitArray(bitSize, fill=0, random=False):
     return bitArray
 
 
-# testBit() returns a nonzero result, 2**offset, if the bit at 'bit_num' is set to 1.
+# # testBit() returns a nonzero result, 2**offset, if the bit at 'bit_num' is set to 1.
+# def testBit(array_name, bit_num):
+#     record = bit_num >> 5
+#     offset = bit_num & 31
+#     mask = 1 << offset
+#     return array_name[record] & mask
+
+
+# testBit() returns 1 or 0.
 def testBit(array_name, bit_num):
     record = bit_num >> 5
     offset = bit_num & 31
-    mask = 1 << offset
-    return array_name[record] & mask
+    return (array_name[record] >> offset) & 1
 
 
 # setBit() returns an integer with the bit at 'bit_num' set to 1.

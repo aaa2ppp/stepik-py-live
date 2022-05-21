@@ -1,61 +1,67 @@
 <div>
     <div id="hiddenCounter" class="hidden">{{ generation.serial }}</div>
-    <div class="hidden">{{ generation.__class__.__name__ }}</div>
 
     {% if generation.is_over -%}
         <h2 id="gameOver">КОНЕЦ ИГРЫ</h2>
     {% else -%}
         <br>
-    {% endif -%}
+    {% endif %}
 
     {% if not wss %}
         wss = (640, 480)
-    {% endif %}
+    {% endif -%}
 
-    {% set size = (wss[0] * 2 // (generation.width * 3), wss[1] * 2 // (generation.height * 3)) | min %}
+    {% set size = (wss[0] * 2 // (generation.width * 3), wss[1] * 2 // (generation.height * 3)) | min -%}
 
     {% if size < 8 %}
         {% set size = 8 %}
     {% elif size > 32 %}
         {% set size = 32 %}
-    {% endif %}
+    {% endif -%}
 
     {# TODO: How to do this using styles if the width and height are dynamic? #}
-    {% set cell_size = 'width:{}px;height:{}px;'.format(size, size) %}
+    {% set cell_size = 'width:{}px;height:{}px;'.format(size, size) -%}
+
+    {% set previous = generation.previous -%}
+
+    {% macro show_cell(row, col) -%}
+        {% set cell_class = "cell" %}
+        {% set cell_value = "_" -%}
+
+        {% if previous %}
+            {% if generation.is_live_cell(row, col) %}
+                {% if previous.is_live_cell(row, col) %}
+                    {% set cell_class = "cell surviving-cell" %}
+                    {% set cell_value = "Х" %}
+                {% else %}
+                    {% set cell_class = "cell living-cell" %}
+                    {% set cell_value = "x" %}
+                {% endif -%}
+
+            {% elif previous.is_live_cell(row, col) %}
+                {% set cell_class = "cell dead-cell" %}
+                {% set cell_value = "D" %}
+            {% endif -%}
+
+        {% elif generation.is_live_cell(row, col)  %}
+            {% set cell_class = "cell living-cell" %}
+            {% set cell_value = "x" %}
+        {% endif -%}
+
+        {% if row == 0 or col == 0 -%}
+            <td class="{{ cell_class }}"><div style="{{ cell_size }}">{{ cell_value }}</div></td>
+        {%- else -%}
+            <td class="{{ cell_class }}">{{ cell_value }}</td>
+        {%- endif %}
+    {%- endmacro -%}
 
     <table class="world" style="font-family: monospace;">
-        {% set previous = generation.previous -%}
-        <tr>
-            {% for col in range(0, generation.width) -%}
-                {% if generation.is_live_cell(0, col) -%}
-                    <td class="cell living-cell"><div style="{{ cell_size }}">X</div></td>
-                {% elif previous and previous.is_live_cell(0, col) -%}
-                    <td class="cell dead-cell"><div style="{{ cell_size }}">D</div></td>
-                {% else -%}
-                    <td class="cell"><div style="{{ cell_size }}">_</div></td>
-                {% endif -%}
-            {% endfor -%}
-        </tr>
-        {% for row in range(1, generation.height) -%}
+        {%- for row in range(generation.height) -%}
             <tr>
-                {% if generation.is_live_cell(row, 0) -%}
-                    <td class="cell living-cell"><div style="{{ cell_size }}">X</div></td>
-                {% elif previous and previous.is_live_cell(row, 0) -%}
-                    <td class="cell dead-cell"><div style="{{ cell_size }}">D</div></td>
-                {% else -%}
-                    <td class="cell"><div style="{{ cell_size }}">_</div></td>
-                {% endif -%}
-
-                {% for col in range(1, generation.width) -%}
-                    {% if generation.is_live_cell(row, col) -%}
-                        <td class="cell living-cell">X</td>
-                    {% elif previous and previous.is_live_cell(row, col) -%}
-                        <td class="cell dead-cell">D</td>
-                    {% else -%}
-                        <td class="cell">_</td>
-                    {% endif -%}
+                {% for col in range(generation.width) -%}
+                    {{ show_cell(row, col) }}
                 {% endfor -%}
             </tr>
-        {% endfor -%}
+        {%- endfor -%}
     </table>
 </div>

@@ -8,68 +8,72 @@
 
     const AUTO_UPDATE_PARAM = "autoupdate"
     const UPDATE_PERIOD_PARAM = "update_period";
-    const GENERATION_SERIAL_PARAM = "serial";
+    const WORLD_SERIAL_PARAM = "serial";
 
     const WORLD_URL = '/world';
-
-    const WORLD_CONTAINER_ID = 'worldContainer';
-    const COUNTER_ID = 'counter';
     const HIDDEN_COUNTER_ID = 'hiddenCounter';
-    const EXIT_BUTTON_ID = 'exitButton';
-    const REFRESH_BUTTON_ID = 'refreshButton';
     const GAME_OVER_ID = 'gameOver';
+
+    const CONTENT_SECTOR = '.app_content';
 
     const STOP_LABEL = 'Остановить';
     const CONTINUE_LABEL = 'Продолжить';
 
+    const worldContainer = getElement('worldContainer', true);
+    const counter = getElement('counter');
+    const refreshButton = getElement('refreshButton');
+    const exitButton = getElement('exitButton');
+
     const FRAME_QUEUE_SIZE = 5;
     const FRAME_QUEUE_TIMEOUT = 10;
-
-    const worldContainer = getElementById(WORLD_CONTAINER_ID);
-    if (!worldContainer) {
-        console.error(`${WORLD_CONTAINER_ID}' is required`);
-        return;
-    }
-
-    const counter = getElementById(COUNTER_ID);
-    const refreshButton = getElementById(REFRESH_BUTTON_ID);
-    const exitButton = getElementById(EXIT_BUTTON_ID);
-
     const frameQueue = [];
-    let lastLoad = parseInt(counter?.textContent);
-    let lastShow = lastLoad;
+    let lastLoadedWorld = parseInt(counter?.textContent);
+    let lastShownWorld = lastLoadedWorld;
 
-    let autoUpdateEnabled = undefined;
+    let autoUpdateEnabled;
+    let updatePeriod;
     let currentUpdateLoopId = 0;
 
-    let _params = new URL(location).searchParams;
-
-    let updatePeriod = parseInt(_params.get(UPDATE_PERIOD_PARAM)) || 1000;
-    if (updatePeriod < 100) {
-        console.warn(`Too small value of ${UPDATE_PERIOD_PARAM}=${updatePeriod}. Set it to 100`);
-        updatePeriod = 100;
-    }
-
-    let _autoupdate = _params.has(AUTO_UPDATE_PARAM) && ["no", "off", "false", "0"].indexOf(_params.get(AUTO_UPDATE_PARAM).toLowerCase()) === -1;
-
-    _params = null;
-
-    setAutoUpdate(_autoupdate && !document.getElementById(GAME_OVER_ID));
-
-    exitButton?.addEventListener('click', () => setAutoUpdate(false));
-
-    refreshButton?.addEventListener('click', (event) => {
-        setAutoUpdate(!autoUpdateEnabled);
-        event.preventDefault();
-        event.currentTarget.blur();
-    });
+    init();
 
     // ------------------------------------------------------------------------
 
-    function getElementById(id) {
+    function init() {
+        const searchParams = new URL(location).searchParams;
+
+        updatePeriod = parseInt(searchParams.get(UPDATE_PERIOD_PARAM));
+        if (isNaN(updatePeriod)) {
+            updatePeriod = 1000;
+        } else if (updatePeriod < 100) {
+            console.warn(`Too small value of ${UPDATE_PERIOD_PARAM}=${updatePeriod}. Set it to 100`);
+            updatePeriod = 100;
+        }
+
+        let _autoupdate = searchParams.has(AUTO_UPDATE_PARAM) &&
+            ["no", "off", "false", "0"].indexOf(searchParams.get(AUTO_UPDATE_PARAM).toLowerCase()) === -1;
+
+        setAutoUpdate(_autoupdate && !document.getElementById(GAME_OVER_ID));
+
+        exitButton?.addEventListener('click', () => setAutoUpdate(false));
+
+        refreshButton?.setAttribute('href', '?#');
+        refreshButton?.addEventListener('click', (event) => {
+            setAutoUpdate(!autoUpdateEnabled);
+            event.preventDefault();
+            event.currentTarget.blur();
+        });
+    }
+
+    // ------------------------------------------------------------------------
+
+    function getElement(id, required) {
         const el = document.getElementById(id);
-        if (!el) {
-            console.warn(`Element with id='${id}' was not found on this page`);
+        if (el === null) {
+            if (required) {
+                throw new Error(`Required element with di='${id}' not found on this page`);
+            } else {
+                console.warn(`Element with di='${id}' not found on this page`);
+            }
         }
         return el;
     }
@@ -77,24 +81,25 @@
     // ------------------------------------------------------------------------
 
     function setAutoUpdate(value) {
+        if (value === autoUpdateEnabled) {
+            return;
+        }
+
         const oldValue = autoUpdateEnabled;
+        autoUpdateEnabled = value;
 
-        if (value !== undefined && value !== oldValue) {
-            autoUpdateEnabled = value;
+        updateRefreshButtonLabel();
+        updateAddressLine();
 
-            updateRefreshButtonLabel();
-            updateUrl();
-
-            if (value) {
-                if (oldValue === undefined) {
-                    // at first time
-                    startUpdateLoopsWithTimeout();
-                } else {
-                    startUpdateLoopsNow();
-                }
+        if (value) {
+            if (oldValue === undefined) {
+                // at first time
+                startUpdateLoopsWithTimeout();
             } else {
-                stopUpdateLoops();
+                startUpdateLoopsNow();
             }
+        } else {
+            stopUpdateLoops();
         }
     }
 
@@ -125,7 +130,7 @@
         }
     }
 
-    function updateUrl() {
+    function updateAddressLine() {
         const url = new URL(location);
         const params = url.searchParams;
 
@@ -136,10 +141,11 @@
         }
 
         params.set(UPDATE_PERIOD_PARAM, updatePeriod.toString());
-        if (isNaN(lastShow)) {
-            params.delete(GENERATION_SERIAL_PARAM)
+
+        if (isNaN(lastShownWorld)) {
+            params.delete(WORLD_SERIAL_PARAM)
         } else {
-            params.set(GENERATION_SERIAL_PARAM, lastShow.toString());
+            params.set(WORLD_SERIAL_PARAM, lastShownWorld.toString());
         }
 
         history.replaceState(null, null, url);
@@ -152,7 +158,6 @@
     }
 
     async function loadWorldLoop(loopId) {
-
         while (loopId === currentUpdateLoopId) {
 
             if (frameQueue.length >= FRAME_QUEUE_SIZE) {
@@ -160,11 +165,11 @@
                 continue;
             }
 
-            const frame = createFrame(await loadWorld(lastLoad + 1));
+            const frame = createFrame(await loadWorld(lastLoadedWorld + 1));
             frameQueue.push(frame);
 
             if (!isNaN(frame.serial)) {
-                lastLoad = frame.serial;
+                lastLoadedWorld = frame.serial;
             }
 
             if (frame.end) {
@@ -196,26 +201,26 @@
     }
 
     function createFrame([success, html_text]) {
-        let serial, content, end;
+        let content, serial, end;
 
         const template = document.createElement('template');
         template.innerHTML = html_text;
         content = template.content;
 
         if (success) {
-            end = !!content.getElementById(GAME_OVER_ID);
             serial = parseInt(content.getElementById(HIDDEN_COUNTER_ID)?.textContent);
+            end = !!content.getElementById(GAME_OVER_ID);
         } else {
-            end = true;
-            serial = NaN;
-            const app_content = template.content.querySelector(".app_content");
+            const app_content = template.content.querySelector(CONTENT_SECTOR);
             if (app_content !== null) {
                 content = new DocumentFragment();
                 content.append(app_content);
             }
+            serial = NaN;
+            end = true;
         }
 
-        return {serial, content, end};
+        return {content, serial, end};
     }
 
     // ------------------------------------------------------------------------
@@ -232,14 +237,14 @@
 
             const frame = frameQueue.shift();
             showWorld(frame);
-            lastShow = frame.serial;
+            lastShownWorld = frame.serial;
 
             if (frame.end) {
                 setAutoUpdate(false);
                 break;
             }
 
-            updateUrl();
+            updateAddressLine();
 
             const endTime = Date.now();
             const timeout = updatePeriod - (endTime - startTime);
@@ -255,10 +260,10 @@
     }
 
     function showWorld({content, serial}) {
+        worldContainer.replaceChild(content, worldContainer.firstElementChild);
         if (counter) {
             counter.textContent = serial.toString();
         }
-        worldContainer.replaceChild(content, worldContainer.firstElementChild);
     }
 
 })();

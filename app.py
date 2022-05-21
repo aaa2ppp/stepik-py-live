@@ -46,7 +46,7 @@ def index(context):
     form = WorldSizeForm(context)
 
     if form.validate_on_submit():
-        GameOfLife(context).create_new_life(height=form.height.data, width=form.width.data)
+        GameOfLife(context).create_new_random_life(height=form.height.data, width=form.width.data)
         if form.js_off.data:
             return redirect(url_for("live",
                                     js="off",
@@ -79,19 +79,17 @@ def world(context):
 
 
 def render_live(context, template: str, **kwargs):
-    serial = request.args.get('serial')
-    if serial is not None:
-        try:
-            serial = int(serial)
-        except ValueError:
-            return invalid_parameter_message("serial", "Должно быть целое число")
+    try:
+        serial = int(request.args.get('serial', '0'))
+    except ValueError:
+        return invalid_parameter_message("serial", "Значение должно быть целым числом")
 
-        if serial < 0:
-            return invalid_parameter_message("serial", "Должно быть больше 0")
+    if serial < 0:
+        return invalid_parameter_message("serial", "Значение должно быть больше или равно 0")
 
     try:
         game = GameOfLife(context)
-        generation = game.get_next_generation() if serial is None else game.get_generation(serial)
+        generation = game.get_generation(serial)
     except NoGenerationError:
         code = 500
         message = "Нет ни одного поколения клеток. Пожалуйста создайте новую жизнь."
@@ -111,15 +109,15 @@ def nothing_works():
 @app.route("/new_live")
 @open_session
 def new_live(context):
-    GameOfLife(context).create_new_life(25, 25)
+    GameOfLife(context).create_new_random_life(25, 25)
     return redirect(url_for("live", **request.args))
 
 
 @app.route("/new_world")
 @open_session
 def new_world(context):
-    GameOfLife(context).create_new_life(25, 25)
-    return redirect(url_for("world"))
+    GameOfLife(context).create_new_random_life(25, 25)
+    return redirect(url_for("world", **request.args))
 
 
 if __name__ == "__main__":
