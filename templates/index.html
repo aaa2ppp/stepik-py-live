@@ -20,19 +20,17 @@
         <p>{{ form.submit(class_="btn btn-primary") }}</p>
     </form>
 
-    <div class="remark text">
-        <div class="column centered">
-            <hr>
-            {% include "help.html" %}
-            <hr>
-        </div>
+    <div class="column centered text">
+        <hr>
+        {% include "help.html" %}
+        <hr>
     </div>
 
 {% endblock %}
 
 {% block navigation %}
     <p>
-        <a href="{{ url_for('new_live', js='on', autoupdate='on') }}">Прямая ссылка на игру</a>
+        <a href="{{ url_for('new_live', autoupdate='on') }}">Прямая ссылка на игру</a>
         | <a href="{{ url_for('nothing_works') }}">Ничего не работает</a>
     </p>
 {% endblock %}

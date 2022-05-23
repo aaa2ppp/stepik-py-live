@@ -18,7 +18,7 @@ app.jinja_options["lstrip_blocks"] = True
 app.jinja_options["keep_trailing_newline"] = True
 
 # Tell browser to don't cache anything
-if int(os.environ.get('NO_CACHE', "0")):
+if int(os.environ.get('NO_CACHE', '0')):
     @app.after_request
     def after_request(response):
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
@@ -26,7 +26,7 @@ if int(os.environ.get('NO_CACHE', "0")):
         response.headers["Pragma"] = "no-cache"
         return response
 
-_GEME_VIEWS = ('live', 'world', 'plain_world')
+_GAME_VIEWS = ('live', 'world', 'plain_world')
 
 
 @app.route("/check-session")
@@ -49,13 +49,40 @@ def index(context):
 
     if form.validate_on_submit():
         GameOfLife(context).create_new_random_life(width=form.width.data, height=form.height.data)
-        return redirect(url_for("live",
-                                js=("on", "off")[form.js_off.data],
-                                autoupdate=("off", "on")[form.autoupdate.data],
-                                update_period=form.update_period.data,
-                                serial=form.serial.data))
-    else:
-        return render_template("index.html", form=form)
+
+        if form.js_off.data:
+            return redirect(url_for("live",
+                                    js="off",
+                                    serial=form.serial.data))
+        else:
+            return redirect(url_for("live",
+                                    autoupdate=("off", "on")[form.autoupdate.data],
+                                    update_period=form.update_period.data,
+                                    serial=form.serial.data))
+
+    return render_template("index.html", form=form)
+
+
+# Direct route to create a new life
+@app.route("/new_live")
+@app.route("/new_live_<int:width>x<int:height>")
+@open_session
+def new_live(context, width=None, height=None):
+    if width is None:
+        width = int(request.args.get('width', 25))
+
+    if height is None:
+        height = int(request.args.get('height', 25))
+
+    if width < 1 or height < 1:
+        code = 400
+        message = "Минимальный допустимый размер поля игры 1х1"
+        return render_template("error.html", message=message, code=code), code
+
+    GameOfLife(context).create_new_random_life(width=width, height=height)
+
+    args = dict((k, v) for k, v in request.args.items() if k not in ('width', 'height'))
+    return redirect(url_for("live", **args))
 
 
 @app.route("/live")
@@ -65,7 +92,7 @@ def live(context, view=None):
     if view is None:
         view = request.args.get('view', 'live')
 
-    if view not in _GEME_VIEWS:
+    if view not in _GAME_VIEWS:
         code = 404
         message = f"Страница {request.url} не найдена"
         return render_template("error.html", message=message, code=code), code
@@ -103,28 +130,6 @@ def live(context, view=None):
 @app.route("/nothing_works")
 def nothing_works():
     return render_template("message-for-reviewers.html")
-
-
-# The following direct link are FOR TESTS ONLY
-@app.route("/new_live")
-@app.route("/new_live_<int:width>x<int:height>")
-@open_session
-def new_live(context, width=None, height=None):
-    if width is None:
-        width = int(request.args.get('width', 25))
-
-    if height is None:
-        height = int(request.args.get('height', 25))
-
-    if width < 1 or height < 1:
-        code = 400
-        message = "Минимальный допустимый размер поля игры 1х1"
-        return render_template("error.html", message=message, code=code), code
-
-    GameOfLife(context).create_new_random_life(width=width, height=height)
-
-    args = dict((k, v) for k, v in request.args.items() if k not in ('width', 'height'))
-    return redirect(url_for("live", **args))
 
 
 if __name__ == "__main__":

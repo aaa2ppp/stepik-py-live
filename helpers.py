@@ -1,6 +1,6 @@
 from functools import wraps
 
-from flask import request, url_for, redirect, render_template, Response
+from flask import request, url_for, redirect, render_template, Response, make_response
 
 from util.session import SessionService
 
@@ -44,7 +44,7 @@ def render_plain_world(generation):
 
     width = generation.width
     for row in range(generation.height):
-        text.append("".join(str(generation.cell_state(row, col).value) for col in range(width)))
+        text.append("".join(chr(generation.cell_state(row, col).value + 48) for col in range(width)))
         text.append('\n')
 
     response = Response("".join(text))

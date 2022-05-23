@@ -1,11 +1,8 @@
-import array
-from enum import Enum, IntEnum
+from enum import IntEnum
 from typing import Optional, List, Tuple
 
 from util.bitarray import makeBitArray, setBit, testBit
 from util.session import SessionContext
-
-_DUPLICATE_SEARCH_DEPTH = 4
 
 
 class CellState(IntEnum):
@@ -16,6 +13,9 @@ class CellState(IntEnum):
 
 
 class CellGeneration:
+    _serial = 0
+    _width = 20
+    _height = 20
 
     def __init__(self, *,
                  width: Optional[int] = None,
@@ -26,36 +26,40 @@ class CellGeneration:
                  ):
 
         if previous is None:
-            _serial = 0
-            if width is None or height is None:
-                raise AttributeError("Required width and height")
-            if width < 1 or height < 1:
-                raise AttributeError(f"Minimal size of word 1x1, got width={width}, height={height}")
-            arr_size = width * height
-            _prev_world = tuple(
-                makeBitArray(arr_size, fill=0))  # Now the world was empty, and the Spirit of God hovered over it...
-            if _world is None:
-                _world = tuple(makeBitArray(arr_size, random=True)) if random else _prev_world
-            _different_worlds = {_prev_world}  # always includes an empty world
+            if width is not None:
+                if width < 1:
+                    raise ValueError(f"`width` must be natural number, got {width}")
+                self._width = width
 
+            if height is not None:
+                if height < 1:
+                    raise ValueError(f"`height` must be natural number, got {height}")
+                self._height = height
+
+            array_size = self._width * self._height
+            empty_world = tuple(makeBitArray(array_size, fill=0))
+
+            self._prev_world = empty_world  # Now the world was empty, and the Spirit of God hovered over it...
+            self._different_worlds = {empty_world}  # always includes an empty world
+
+            if _world is not None:
+                self._world = _world
+            else:
+                self._world = tuple(makeBitArray(array_size, random=True)) if random else empty_world
         else:
-            _serial = previous._serial + 1
-            width = previous._width
-            height = previous._height
-            _prev_world = previous._world
-            if _world is None:
-                _world = tuple(self.__class__._create_next_world(_prev_world, width, height))
-            _different_worlds = previous._different_worlds
+            self._serial = previous._serial + 1
+            self._width = previous._width
+            self._height = previous._height
+            self._prev_world = previous._world
+            self._different_worlds = previous._different_worlds
 
-        self._serial = _serial
-        self._width = width
-        self._height = height
-        self._world = _world
-        self._prev_world = _prev_world
-        self._different_worlds = _different_worlds
+            if _world is not None:
+                self._world = _world
+            else:
+                self._world = self.__class__._create_next_world(previous._world, previous._width, previous._height)
 
-        _different_worlds.add(_world)
-        self._is_over = _serial >= len(_different_worlds) - 1
+        self._different_worlds.add(self._world)
+        self._is_over = self._serial >= len(self._different_worlds) - 1
 
     @property
     def serial(self) -> int:
@@ -121,7 +125,7 @@ class CellGeneration:
                         setBit(new_world, i)
                 i += 1
 
-        return new_world
+        return tuple(new_world)
 
 
 class GameOfLifeError(Exception):
@@ -133,6 +137,7 @@ class NoGenerationError(GameOfLifeError):
 
 
 class GameOfLifeMeta(type):
+
     def __call__(cls, context: SessionContext):
         instance = context.data.get(cls)
         if instance is None:
@@ -141,7 +146,6 @@ class GameOfLifeMeta(type):
 
 
 class GameOfLife(metaclass=GameOfLifeMeta):
-    max_history_length = 10
 
     def __init__(self):
         self._generations: Optional[List[CellGeneration]] = None
@@ -151,10 +155,10 @@ class GameOfLife(metaclass=GameOfLifeMeta):
 
     def get_generation(self, serial: int) -> CellGeneration:
         if serial < 0:
-            raise AttributeError('Serial must be positive number')
+            raise ValueError(f"`serial` must be positive number, get {serial}")
 
         if self._generations is None:
-            raise NoGenerationError('First need to call the create_new_life function')
+            raise NoGenerationError("First need to call the `create_new_life` function")
 
         if serial < len(self._generations):
             return self._generations[serial]
