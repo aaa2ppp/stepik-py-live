@@ -51,14 +51,13 @@ class CellGeneration:
         else:
             self._world = tuple(makeBitArray(array_size, random=random))
 
-        # check game over
         if previous is not None:
-            self._worlds = _worlds = previous._worlds
-            self._is_over = self._world in _worlds
-            _worlds.add(self._world)
+            self._worlds = previous._worlds
         else:
-            self._worlds = {tuple(makeBitArray(array_size)), self._world}
-            self._is_over = False
+            self._worlds = {tuple(makeBitArray(array_size))}
+
+        self._worlds.add(self._world)
+        self._is_over = self._serial >= len(self._worlds) - 1
 
     @property
     def width(self) -> int:
