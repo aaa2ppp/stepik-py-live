@@ -23,12 +23,10 @@
     {# TODO: How to do this using styles if the width and height are dynamic? #}
     {% set cell_size = 'width:{}px;height:{}px;'.format(size, size) -%}
 
-    {% set previous = generation.previous -%}
-
     {% macro show_cell(row, col) -%}
         {% set cell_state = generation.cell_state(row, col) -%}
 
-        {% if row == 0 or col == 0 -%}
+        {% if cell_size and (row == 0 or col == 0) -%}
             {# cell value needed for test only -#}
             <td class="{{ cell_state.name }}-cell"><div style="{{ cell_size }}">{{ ('', 'x', 'D', 'X')[cell_state.value] }}</div></td>
         {%- else -%}

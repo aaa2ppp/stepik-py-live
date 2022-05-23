@@ -1,6 +1,6 @@
 import array
 from enum import Enum, IntEnum
-from typing import Optional, List
+from typing import Optional, List, Tuple
 
 from util.bitarray import makeBitArray, setBit, testBit
 from util.session import SessionContext
@@ -16,48 +16,50 @@ class CellState(IntEnum):
 
 
 class CellGeneration:
-    def __init__(self,
+
+    def __init__(self, *,
                  width: Optional[int] = None,
                  height: Optional[int] = None,
-                 previous: Optional['CellGeneration'] = None,
-                 serial: Optional[int] = None,
                  random: bool = False,
-                 _world=None
+                 previous: Optional['CellGeneration'] = None,
+                 _world: Tuple[int] = None
                  ):
 
-        if width is not None:
-            self._width = width
+        if previous is None:
+            _serial = 0
+            if width is None or height is None:
+                raise AttributeError("Required width and height")
+            if width < 1 or height < 1:
+                raise AttributeError(f"Minimal size of word 1x1, got width={width}, height={height}")
+            arr_size = width * height
+            _prev_world = tuple(
+                makeBitArray(arr_size, fill=0))  # Now the world was empty, and the Spirit of God hovered over it...
+            if _world is None:
+                _world = tuple(makeBitArray(arr_size, random=True)) if random else _prev_world
+            _different_worlds = {_prev_world}  # always includes an empty world
+
         else:
-            self._width = width = previous.width
+            _serial = previous._serial + 1
+            width = previous._width
+            height = previous._height
+            _prev_world = previous._world
+            if _world is None:
+                _world = tuple(self.__class__._create_next_world(_prev_world, width, height))
+            _different_worlds = previous._different_worlds
 
-        if height is not None:
-            self._height = height
-        else:
-            self._height = height = previous.height
+        self._serial = _serial
+        self._width = width
+        self._height = height
+        self._world = _world
+        self._prev_world = _prev_world
+        self._different_worlds = _different_worlds
 
-        array_size = width * height
+        _different_worlds.add(_world)
+        self._is_over = _serial >= len(_different_worlds) - 1
 
-        self._previous = previous
-
-        if serial is not None:
-            self._serial = serial
-        elif previous is not None:
-            self._serial = previous._serial + 1
-        else:
-            self._serial = 0
-
-        if _world is not None:
-            self._world = tuple(_world)
-        else:
-            self._world = tuple(makeBitArray(array_size, random=random))
-
-        if previous is not None:
-            self._worlds = previous._worlds
-        else:
-            self._worlds = {tuple(makeBitArray(array_size))}
-
-        self._worlds.add(self._world)
-        self._is_over = self._serial >= len(self._worlds) - 1
+    @property
+    def serial(self) -> int:
+        return self._serial
 
     @property
     def width(self) -> int:
@@ -68,27 +70,15 @@ class CellGeneration:
         return self._height
 
     @property
-    def serial(self) -> int:
-        return self._serial
-
-    @property
-    def previous(self) -> 'CellGeneration':
-        return self._previous
-
-    @property
     def is_over(self):
         return self._is_over
 
     def cell_state(self, row: int, col: int) -> CellState:
         i = row * self._width + col
-        prev = self._previous
+        return CellState(testBit(self._world, i) + (testBit(self._prev_world, i) << 1))
 
-        if prev is None:
-            return CellState(testBit(self._world, i))
-        else:
-            return CellState(testBit(self._world, i) + (testBit(prev._world, i) << 1))
-
-    def create_next_generation(self) -> 'CellGeneration':
+    @staticmethod
+    def _create_next_world(world, width, height):
         """
         1. Any live cell with two or three live neighbours survives.
         2. Any dead cell with three live neighbours becomes a live cell.
@@ -97,15 +87,11 @@ class CellGeneration:
         https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life#Rules
         """
 
-        width = self._width
-        height = self._height
-        world = self._world
-
         new_world = makeBitArray(width * height)
 
         i = 0
-        for row in range(self._height):
-            for col in range(self._width):
+        for row in range(height):
+            for col in range(width):
 
                 #    |   c1  |   c0  |   c2  |
                 # ---+-------+-------+-------+
@@ -135,10 +121,7 @@ class CellGeneration:
                         setBit(new_world, i)
                 i += 1
 
-        return CellGeneration(previous=self, _world=new_world)
-
-    def forget_previous(self):
-        self._previous = None
+        return new_world
 
 
 class GameOfLifeError(Exception):
@@ -163,12 +146,12 @@ class GameOfLife(metaclass=GameOfLifeMeta):
     def __init__(self):
         self._generations: Optional[List[CellGeneration]] = None
 
-    def create_new_random_life(self, height: int = 20, width: int = 20) -> None:
-        self._generations = [CellGeneration(height, width, random=True)]
+    def create_new_random_life(self, width: int = 20, height: int = 20) -> None:
+        self._generations = [CellGeneration(width=width, height=height, random=True)]
 
     def get_generation(self, serial: int) -> CellGeneration:
         if serial < 0:
-            raise GameOfLifeError('Serial must be positive number')
+            raise AttributeError('Serial must be positive number')
 
         if self._generations is None:
             raise NoGenerationError('First need to call the create_new_life function')
@@ -178,7 +161,7 @@ class GameOfLife(metaclass=GameOfLifeMeta):
 
         generation = self._generations[-1]
         while generation.serial < serial and not generation.is_over:
-            generation = generation.create_next_generation()
+            generation = CellGeneration(previous=generation)
             self._generations.append(generation)
 
         return generation
