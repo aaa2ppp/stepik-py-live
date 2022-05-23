@@ -4,7 +4,7 @@ from flask import Flask, render_template, request, redirect, url_for
 from forms import WorldSizeForm
 
 from game_of_life import GameOfLife, NoGenerationError
-from helpers import open_session, get_window_screen_size, invalid_parameter_message
+from helpers import open_session, get_window_screen_size, invalid_parameter_message, render_plain_world
 from util.session import SessionService
 
 app = Flask(__name__)
@@ -15,7 +15,7 @@ if app.debug:
 
 app.jinja_options["trim_blocks"] = True
 app.jinja_options["lstrip_blocks"] = True
-app.jinja_options["keep_trailing_newline"] = False
+app.jinja_options["keep_trailing_newline"] = True
 
 # Tell browser to don't cache anything
 if int(os.environ.get('NO_CACHE', "0")):
@@ -25,6 +25,8 @@ if int(os.environ.get('NO_CACHE', "0")):
         response.headers["Expires"] = 0
         response.headers["Pragma"] = "no-cache"
         return response
+
+_GEME_VIEWS = ('live', 'world', 'plain_world')
 
 
 @app.route("/check-session")
@@ -46,44 +48,38 @@ def index(context):
     form = WorldSizeForm(context)
 
     if form.validate_on_submit():
-        GameOfLife(context).create_new_random_life(height=form.height.data, width=form.width.data)
-        if form.js_off.data:
-            return redirect(url_for("live",
-                                    js="off",
-                                    serial=form.serial.data))
-        else:
-            return redirect(url_for("live",
-                                    js="on",
-                                    autoupdate=form.autoupdate.data,
-                                    update_period=form.update_period.data,
-                                    serial=form.serial.data))
+        GameOfLife(context).create_new_random_life(width=form.width.data, height=form.height.data)
+        return redirect(url_for("live",
+                                js=("on", "off")[form.js_off.data],
+                                autoupdate=("off", "on")[form.autoupdate.data],
+                                update_period=form.update_period.data,
+                                serial=form.serial.data))
     else:
         return render_template("index.html", form=form)
 
 
 @app.route("/live")
+@app.route("/<view>")
 @open_session
-def live(context):
+def live(context, view=None):
+    if view is None:
+        view = request.args.get('view', 'live')
+
+    if view not in _GEME_VIEWS:
+        code = 404
+        message = f"Страница {request.url} не найдена"
+        return render_template("error.html", message=message, code=code), code
+
     js = request.args.get('js')
-    if js is not None and js in ("no", "off", "false", "0"):
+    if js is not None and js.lower() in ("no", "off", "false", "0"):
         js = False
     else:
         js = True
-    return render_live(context, "live.html", js=js)
 
-
-@app.route("/world")
-@open_session
-def world(context):
-    return render_live(context, "world.html")
-
-
-def render_live(context, template: str, **kwargs):
     try:
         serial = int(request.args.get('serial', '0'))
     except ValueError:
         return invalid_parameter_message("serial", "Значение должно быть целым числом")
-
     if serial < 0:
         return invalid_parameter_message("serial", "Значение должно быть больше или равно 0")
 
@@ -95,8 +91,13 @@ def render_live(context, template: str, **kwargs):
         message = "Нет ни одного поколения клеток. Пожалуйста создайте новую жизнь."
         return render_template("error.html", message=message, code=code), code
 
-    wss = get_window_screen_size()
-    return render_template(template, generation=generation, wss=wss, **kwargs)
+    if view == "plain_world":
+        # Here the use of "jinja" is not optimal. It will be long and difficult.
+        return render_plain_world(generation)
+    else:
+        wss = get_window_screen_size()
+        template = f"{view}.html"
+        return render_template(template, generation=generation, js=js, wss=wss)
 
 
 @app.route("/nothing_works")
@@ -104,20 +105,26 @@ def nothing_works():
     return render_template("message-for-reviewers.html")
 
 
-# The following two direct links are FOR TESTS ONLY
-
+# The following direct link are FOR TESTS ONLY
 @app.route("/new_live")
+@app.route("/new_live_<int:width>x<int:height>")
 @open_session
-def new_live(context):
-    GameOfLife(context).create_new_random_life(25, 25)
-    return redirect(url_for("live", **request.args))
+def new_live(context, width=None, height=None):
+    if width is None:
+        width = int(request.args.get('width', 25))
 
+    if height is None:
+        height = int(request.args.get('height', 25))
 
-@app.route("/new_world")
-@open_session
-def new_world(context):
-    GameOfLife(context).create_new_random_life(25, 25)
-    return redirect(url_for("world", **request.args))
+    if width < 1 or height < 1:
+        code = 400
+        message = "Минимальный допустимый размер поля игры 1х1"
+        return render_template("error.html", message=message, code=code), code
+
+    GameOfLife(context).create_new_random_life(width=width, height=height)
+
+    args = dict((k, v) for k, v in request.args.items() if k not in ('width', 'height'))
+    return redirect(url_for("live", **args))
 
 
 if __name__ == "__main__":

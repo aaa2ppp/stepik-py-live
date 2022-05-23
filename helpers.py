@@ -1,6 +1,6 @@
 from functools import wraps
 
-from flask import request, url_for, redirect, render_template
+from flask import request, url_for, redirect, render_template, Response
 
 from util.session import SessionService
 
@@ -38,4 +38,15 @@ def invalid_parameter_message(param_name: str, err_message: str):
     return render_template("error.html", message=message, code=code), code
 
 
+def render_plain_world(generation):
+    # first two lines
+    text = ["".join((str(generation.serial), '\n', "GAME OVER\n" if generation.is_over else "\n"))]
 
+    width = generation.width
+    for row in range(generation.height):
+        text.append("".join(str(generation.cell_state(row, col).value) for col in range(width)))
+        text.append('\n')
+
+    response = Response("".join(text))
+    response.headers['Content-Type'] = "text/plain; charset=utf-8"
+    return response

@@ -10,19 +10,20 @@
     const UPDATE_PERIOD_PARAM = "update_period";
     const WORLD_SERIAL_PARAM = "serial";
 
-    const WORLD_URL = '/world';
-    const HIDDEN_COUNTER_ID = 'hiddenCounter';
-    const GAME_OVER_ID = 'gameOver';
+    const WORLD_URL = '/plain_world';
 
+    const GAME_OVER_SECTOR = '#gameOver';
     const CONTENT_SECTOR = '.app_content';
 
     const STOP_LABEL = 'Остановить';
     const CONTINUE_LABEL = 'Продолжить';
 
-    const worldContainer = getElement('worldContainer', true);
-    const counter = getElement('counter');
-    const refreshButton = getElement('refreshButton');
-    const exitButton = getElement('exitButton');
+    const CELL_CLASS = ['empty-cell', 'living-cell', 'dead-cell', 'surviving-cell'];
+
+    const worldContainer = getElementById('worldContainer', true);
+    const counter = getElementById('counter');
+    const refreshButton = getElementById('refreshButton');
+    const exitButton = getElementById('exitButton');
 
     const FRAME_QUEUE_SIZE = 5;
     const FRAME_QUEUE_TIMEOUT = 10;
@@ -52,7 +53,7 @@
         let _autoupdate = searchParams.has(AUTO_UPDATE_PARAM) &&
             ["no", "off", "false", "0"].indexOf(searchParams.get(AUTO_UPDATE_PARAM).toLowerCase()) === -1;
 
-        setAutoUpdate(_autoupdate && !document.getElementById(GAME_OVER_ID));
+        setAutoUpdate(_autoupdate && !worldContainer.querySelector(GAME_OVER_SECTOR));
 
         exitButton?.addEventListener('click', () => setAutoUpdate(false));
 
@@ -66,7 +67,7 @@
 
     // ------------------------------------------------------------------------
 
-    function getElement(id, required) {
+    function getElementById(id, required) {
         const el = document.getElementById(id);
         if (el === null) {
             if (required) {
@@ -172,7 +173,7 @@
                 lastLoadedWorld = frame.serial;
             }
 
-            if (frame.end) {
+            if (frame.eof) {
                 break;
             }
         }
@@ -183,7 +184,10 @@
         let html_text;
 
         try {
-            const url = isNaN(serial) ? WORLD_URL : WORLD_URL + `?serial=${serial}`;
+            const url = new URL(WORLD_URL, location);
+            if (!isNaN(serial)) {
+                url.searchParams.set('serial', serial)
+            }
             const response = await fetch(url);
             success = response.ok;
             html_text = await response.text();
@@ -201,26 +205,24 @@
     }
 
     function createFrame([success, html_text]) {
-        let content, serial, end;
-
-        const template = document.createElement('template');
-        template.innerHTML = html_text;
-        content = template.content;
+        let serial, eof, error;
 
         if (success) {
-            serial = parseInt(content.getElementById(HIDDEN_COUNTER_ID)?.textContent);
-            end = !!content.getElementById(GAME_OVER_ID);
+            // get 'serial' from fist line
+            let [_start, _end] = [0, html_text.indexOf('\n')]
+            serial = parseInt(html_text.substring(_start, _end));
+            _start = _end + 1;
+
+            // check the 'game over' in the second line
+            _end = html_text.indexOf('\n', _start);
+            eof = html_text.substring(_start, _end).toLowerCase() === "game over";
         } else {
-            const app_content = template.content.querySelector(CONTENT_SECTOR);
-            if (app_content !== null) {
-                content = new DocumentFragment();
-                content.append(app_content);
-            }
             serial = NaN;
-            end = true;
+            error = true;
+            eof = true;
         }
 
-        return {content, serial, end};
+        return {html_text, serial, eof, error};
     }
 
     // ------------------------------------------------------------------------
@@ -236,15 +238,21 @@
             }
 
             const frame = frameQueue.shift();
-            showWorld(frame);
-            lastShownWorld = frame.serial;
+            if (frame.error) {
+                showError(frame.html_text)
+            } else {
+                showWorld(frame.html_text);
+                lastShownWorld = frame.serial;
+            }
 
-            if (frame.end) {
+            if (frame.eof) {
                 setAutoUpdate(false);
                 break;
             }
 
-            updateAddressLine();
+            // XXX: Disabled because it causes an error in Safari and floods history.
+            //      SecurityError: Attempt to use history.replaceState() more than 100 times per 30 seconds
+            // updateAddressLine();
 
             const endTime = Date.now();
             const timeout = updatePeriod - (endTime - startTime);
@@ -259,11 +267,39 @@
         }
     }
 
-    function showWorld({content, serial}) {
-        worldContainer.replaceChild(content, worldContainer.firstElementChild);
+    function showWorld(text) {
+        const lines = text.split('\n');
+
+        // get counter from first line
         if (counter) {
-            counter.textContent = serial.toString();
+            counter.textContent = lines[0];
         }
+
+        // get header from second line
+        const wordHeader = worldContainer.querySelector("#worldHeader"); // TODO: on init
+        if (wordHeader) {
+            wordHeader.innerHTML = `<h2>${lines[1]}</h2>`;
+        }
+
+        // get cells from next lines
+        const world = worldContainer.querySelector(".world"); // TODO: on init
+        for (const tr of world.rows) {
+            const row = tr.sectionRowIndex;
+            for (const td of tr.cells) {
+                const col = td.cellIndex;
+                const class_index = lines[row + 2].charCodeAt(col) - 48;
+                td.className = CELL_CLASS[class_index];
+            }
+        }
+    }
+
+    function showError(html_text) {
+        const template = document.createElement('template');
+        template.innerHTML = html_text
+        const content = template.content.querySelector(CONTENT_SECTOR) ||
+            template.content.querySelector('body') ||
+            template.content;
+        worldContainer.replaceChild(content, worldContainer.firstElementChild);
     }
 
 })();

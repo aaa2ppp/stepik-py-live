@@ -35,7 +35,7 @@ def makeBitArray(bitSize, fill=0, random=False):
 #     return array_name[record] & mask
 
 
-# testBit() returns 1 or 0.
+# testBit() returns 1 if bit is set, or 0 otherwise.
 def testBit(array_name, bit_num):
     record = bit_num >> 5
     offset = bit_num & 31

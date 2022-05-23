@@ -1,11 +1,12 @@
 <div>
     <div id="hiddenCounter" class="hidden">{{ generation.serial }}</div>
-
-    {% if generation.is_over -%}
-        <h2 id="gameOver">КОНЕЦ ИГРЫ</h2>
-    {% else -%}
-        <br>
-    {% endif %}
+    <div id="worldHeader">
+        {%- if generation.is_over -%}
+            <h2 id="gameOver">КОНЕЦ ИГРЫ</h2>
+        {%- else -%}
+            <br>
+        {%- endif -%}
+    </div>
 
     {% if not wss %}
         wss = (640, 480)
@@ -25,37 +26,18 @@
     {% set previous = generation.previous -%}
 
     {% macro show_cell(row, col) -%}
-        {% set cell_class = "cell" %}
-        {% set cell_value = "_" -%}
-
-        {% if previous %}
-            {% if generation.is_live_cell(row, col) %}
-                {% if previous.is_live_cell(row, col) %}
-                    {% set cell_class = "cell surviving-cell" %}
-                    {% set cell_value = "Х" %}
-                {% else %}
-                    {% set cell_class = "cell living-cell" %}
-                    {% set cell_value = "x" %}
-                {% endif -%}
-
-            {% elif previous.is_live_cell(row, col) %}
-                {% set cell_class = "cell dead-cell" %}
-                {% set cell_value = "D" %}
-            {% endif -%}
-
-        {% elif generation.is_live_cell(row, col)  %}
-            {% set cell_class = "cell living-cell" %}
-            {% set cell_value = "x" %}
-        {% endif -%}
+        {% set cell_state = generation.cell_state(row, col) -%}
 
         {% if row == 0 or col == 0 -%}
-            <td class="{{ cell_class }}"><div style="{{ cell_size }}">{{ cell_value }}</div></td>
+            {# cell value needed for test only -#}
+            <td class="{{ cell_state.name }}-cell"><div style="{{ cell_size }}">{{ ('', 'x', 'D', 'X')[cell_state.value] }}</div></td>
         {%- else -%}
-            <td class="{{ cell_class }}">{{ cell_value }}</td>
+            <td class="{{ cell_state.name }}-cell">{{ ('', 'x', 'D', 'X')[cell_state.value] }}</td>
         {%- endif %}
     {%- endmacro -%}
 
-    <table class="world" style="font-family: monospace;">
+    {# border needed for test only -#}
+    <table border class="world">
         {%- for row in range(generation.height) -%}
             <tr>
                 {% for col in range(generation.width) -%}

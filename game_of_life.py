@@ -1,126 +1,142 @@
 import array
-from functools import reduce
-from operator import add
+from enum import Enum, IntEnum
 from typing import Optional, List
 
 from util.bitarray import makeBitArray, setBit, testBit
 from util.session import SessionContext
 
-_duplicate_search_depth = 4
-
-"""
-1. Any live cell with two or three live neighbours survives.
-2. Any dead cell with three live neighbours becomes a live cell.
-3. All other live cells die in the next generation. Similarly, all other dead cells stay dead.
-
-https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life#Rules
-"""
-
-_neighbors_coords = ((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1))
+_DUPLICATE_SEARCH_DEPTH = 4
 
 
-def _cell_will_be_live(previous_generation: 'CellGeneration', row: int, col: int) -> bool:
-    number_of_neighbors = _count_neighbors(previous_generation, row, col)
-
-    if previous_generation.is_live_cell(row, col):
-        return number_of_neighbors in (2, 3)
-    else:
-        return number_of_neighbors == 3
-
-
-def _count_neighbors(generation: 'CellGeneration', row: int, col: int) -> int:
-    def is_live_neighbor(offset):
-        return generation.is_live_cell(row + offset[0], col + offset[1])
-
-    return reduce(add, map(is_live_neighbor, _neighbors_coords), 0)
+class CellState(IntEnum):
+    empty = 0
+    living = 1
+    dead = 2
+    surviving = 3
 
 
 class CellGeneration:
-    def __init__(self, height: int, width: int, previous: Optional['CellGeneration'] = None, serial: int = 0, random: bool = False):
-        self._width = width
-        self._height = height
-        self._previous = previous
-        self._serial = serial
-        self._world = makeBitArray(width * height, random=random)
-        self._is_empty = None
-        self._is_over = None
+    def __init__(self,
+                 width: Optional[int] = None,
+                 height: Optional[int] = None,
+                 previous: Optional['CellGeneration'] = None,
+                 serial: Optional[int] = None,
+                 random: bool = False,
+                 _world=None
+                 ):
 
-    @property
-    def height(self) -> int:
-        return self._height
+        if width is not None:
+            self._width = width
+        else:
+            self._width = width = previous.width
+
+        if height is not None:
+            self._height = height
+        else:
+            self._height = height = previous.height
+
+        array_size = width * height
+
+        self._previous = previous
+
+        if serial is not None:
+            self._serial = serial
+        elif previous is not None:
+            self._serial = previous._serial + 1
+        else:
+            self._serial = 0
+
+        if _world is not None:
+            self._world = tuple(_world)
+        else:
+            self._world = tuple(makeBitArray(array_size, random=random))
+
+        # check game over
+        if previous is not None:
+            self._worlds = _worlds = previous._worlds
+            self._is_over = self._world in _worlds
+            _worlds.add(self._world)
+        else:
+            self._worlds = {tuple(makeBitArray(array_size)), self._world}
+            self._is_over = False
 
     @property
     def width(self) -> int:
         return self._width
 
     @property
-    def previous(self) -> 'CellGeneration':
-        return self._previous
+    def height(self) -> int:
+        return self._height
 
     @property
     def serial(self) -> int:
         return self._serial
 
     @property
-    def world(self) -> array:
-        return self._world
-
-    @property
-    def is_empty(self):
-        if self._is_empty is not None:
-            return self._is_empty
-
-        for x in self._world:
-            if x != 0:
-                return False
-        return True
+    def previous(self) -> 'CellGeneration':
+        return self._previous
 
     @property
     def is_over(self):
-        if self._is_over is not None:
-            return self._is_over
+        return self._is_over
 
-        # NONE: Disable check for empty to avoid redundant calculations.
-        #  In this case, the game will be over on the next generation.
-        #  Because if a generation is empty, then the next generation will also be empty.
+    def cell_state(self, row: int, col: int) -> CellState:
+        i = row * self._width + col
+        prev = self._previous
 
-        # if self.is_empty:
-        #     self._is_over = True
-        #     return True
-
-        # NOTE: To avoid redundant calculations, we limit the search depth.
-        # TODO: Возможно это можно эффективно решить с помощью хешсуммы
-        last = self
-        prev = last
-        for _ in range(_duplicate_search_depth):
-            prev = prev.previous
-            if prev is None:
-                return False
-
-            if prev._world == last._world:
-                self._is_over = True
-                return True
-
-        self._is_over = False
-        return False
-
-    def is_live_cell(self, row: int, col: int) -> bool:
-        return testBit(self._world, (row % self._height) * self._width + col % self._width)
+        if prev is None:
+            return CellState(testBit(self._world, i))
+        else:
+            return CellState(testBit(self._world, i) + (testBit(prev._world, i) << 1))
 
     def create_next_generation(self) -> 'CellGeneration':
+        """
+        1. Any live cell with two or three live neighbours survives.
+        2. Any dead cell with three live neighbours becomes a live cell.
+        3. All other live cells die in the next generation. Similarly, all other dead cells stay dead.
+
+        https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life#Rules
+        """
+
         width = self._width
         height = self._height
-        next_generation = CellGeneration(width=width, height=height, previous=self, serial=self._serial + 1)
-        next_world = next_generation._world
+        world = self._world
+
+        new_world = makeBitArray(width * height)
 
         i = 0
         for row in range(self._height):
             for col in range(self._width):
-                if _cell_will_be_live(self, row, col):
-                    setBit(next_world, i)
+
+                #    |   c1  |   c0  |   c2  |
+                # ---+-------+-------+-------+
+                # r1 | r1+c1 | r1+c0 | r1+c2 |
+                # ---+-------+-------+-------+
+                # r0 | r0+c1 |   i   | r0+c2 |
+                # ---+-------+-------+-------+
+                # r2 | r2+c1 | r2+c0 | r2+c2 |
+                # ---+-------+-------+-------+
+
+                r0 = row * width
+                r1 = ((row - 1) % height) * width
+                r2 = ((row + 1) % height) * width
+                c0 = col
+                c1 = (col - 1) % width
+                c2 = (col + 1) % width
+
+                neighbours = (testBit(world, r0 + c1) + testBit(world, r0 + c2) +
+                              testBit(world, r1 + c1) + testBit(world, r1 + c2) + testBit(world, r1 + c0) +
+                              testBit(world, r2 + c1) + testBit(world, r2 + c2) + testBit(world, r2 + c0))
+
+                if testBit(world, i):
+                    if neighbours in (2, 3):
+                        setBit(new_world, i)
+                else:
+                    if neighbours == 3:
+                        setBit(new_world, i)
                 i += 1
 
-        return next_generation
+        return CellGeneration(previous=self, _world=new_world)
 
     def forget_previous(self):
         self._previous = None

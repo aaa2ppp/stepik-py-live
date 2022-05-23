@@ -14,9 +14,10 @@
     border-collapse: collapse;
     margin: auto;
     font-size: 0;
+    table-layout: fixed;
 }
 
-.cell {
+.empty-cell {
     border: 1px solid black;
     padding: 0;
     color: whitesmoke;
@@ -24,16 +25,22 @@
 }
 
 .living-cell {
+    border: 1px solid black;
+    padding: 0;
     color: lightgreen;
     background: lightgreen;
 }
 
 .surviving-cell {
+    border: 1px solid black;
+    padding: 0;
     color: green;
     background: green;
 }
 
 .dead-cell {
+    border: 1px solid black;
+    padding: 0;
     color: darkred;
     background: darkred;
 }
