@@ -91,27 +91,28 @@ class CellGeneration:
         https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life#Rules
         """
 
-        new_world = makeBitArray(width * height)
+        size = width * height
+        new_world = makeBitArray(size)
+
+        # Calculate indexes of bit array
+
+        #    |   c1  |   c0  |   c2  |
+        # ---+-------+-------+-------+
+        # r1 | r1+c1 | r1+c0 | r1+c2 |
+        # ---+-------+-------+-------+
+        # r0 | r0+c1 |   i   | r0+c2 |
+        # ---+-------+-------+-------+
+        # r2 | r2+c1 | r2+c0 | r2+c2 |
+        # ---+-------+-------+-------+
 
         i = 0
-        for row in range(height):
-            for col in range(width):
+        for r0 in range(0, size, width):
+            r1 = (r0 - width) % size
+            r2 = (r0 + width) % size
 
-                #    |   c1  |   c0  |   c2  |
-                # ---+-------+-------+-------+
-                # r1 | r1+c1 | r1+c0 | r1+c2 |
-                # ---+-------+-------+-------+
-                # r0 | r0+c1 |   i   | r0+c2 |
-                # ---+-------+-------+-------+
-                # r2 | r2+c1 | r2+c0 | r2+c2 |
-                # ---+-------+-------+-------+
-
-                r0 = row * width
-                r1 = ((row - 1) % height) * width
-                r2 = ((row + 1) % height) * width
-                c0 = col
-                c1 = (col - 1) % width
-                c2 = (col + 1) % width
+            for c0 in range(width):
+                c1 = (c0 - 1) % width
+                c2 = (c0 + 1) % width
 
                 neighbours = (testBit(world, r0 + c1) + testBit(world, r0 + c2) +
                               testBit(world, r1 + c1) + testBit(world, r1 + c2) + testBit(world, r1 + c0) +

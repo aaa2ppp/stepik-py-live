@@ -3,7 +3,7 @@ import time
 from game_of_life import CellGeneration
 from util.bitarray import makeBitArray, setBit
 
-count = 1000
+count = 100
 size = 100
 
 start_time = time.time()
@@ -15,10 +15,10 @@ for _ in range(count):
 end_time = time.time()
 print("fill bit array:", end_time - start_time)
 
-cells = CellGeneration(size, size, random=True)
+cells = CellGeneration(width=size, height=size, random=True)
 start_time = time.time()
 for _ in range(count):
-    cells.create_next_generation()
+    cells = CellGeneration(previous=cells)
 end_time = time.time()
 print("create next generation:", end_time - start_time)
 
