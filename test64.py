@@ -4,7 +4,7 @@ from test64.game_of_life64 import CellGeneration
 from util.bitarray import makeBitArray, setBit
 
 count = 100
-width = 200
+width = 2000
 height = 200
 size = width * height
 
