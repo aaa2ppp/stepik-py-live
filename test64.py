@@ -1,6 +1,6 @@
 import time
 
-from game_of_life import CellGeneration
+from test64.game_of_life64 import CellGeneration
 from util.bitarray import makeBitArray, setBit
 
 count = 100

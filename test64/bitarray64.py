@@ -5,52 +5,44 @@ from random import randint
 
 
 def makeBitArray(bitSize, fill=0, random=False):
-    intSize = (bitSize + 31) >> 5  # number of 32 bit integers
+    intSize = (bitSize + 63) >> 6  # number of 64 bit integers
 
     if fill == 1:
-        fill = 4294967295  # all bits set
+        fill = 0xFFFFFFFF_FFFFFFFF  # all bits set
     else:
         fill = 0  # all bits cleared
 
-    bitArray = array.array('L')  # 'L' = unsigned 32-bit integer
+    bitArray = array.array('Q')  # 'L' = unsigned 64-bit integer
 
     if random:
         for _ in range(intSize):
-            bitArray.append(randint(0, 0xFFFFFFFF))
+            bitArray.append(randint(0, 0xFFFFFFFF_FFFFFFFF))
     else:
         bitArray.extend((fill,) * intSize)
 
-    bitArray[-1] &= (0xFFFFFFFF >> (32 - bitSize & 31))  # to correctly compare arrays, clear the unused tail
+    bitArray[-1] &= (0xFFFFFFFF_FFFFFFFF >> (64 - bitSize & 63))  # to correctly compare arrays, clear the unused tail
 
     return bitArray
 
 
-# # testBit() returns a nonzero result, 2**offset, if the bit at 'bit_num' is set to 1.
-# def testBit(array_name, bit_num):
-#     record = bit_num >> 5
-#     offset = bit_num & 31
-#     mask = 1 << offset
-#     return array_name[record] & mask
-
-
 # testBit() returns 1 if bit is set, or 0 otherwise.
 def testBit(array_name, bit_num):
-    record = bit_num >> 5
-    offset = bit_num & 31
+    record = bit_num >> 6
+    offset = bit_num & 63
     return (array_name[record] >> offset) & 1
 
 
 # testBit() returns value of 2 bit (bit_num, bit_num + 1). bit_num must be even!
 def getTwoBit(array_name, bit_num):
-    record = bit_num >> 5
-    offset = bit_num & 31
+    record = bit_num >> 6
+    offset = bit_num & 63
     return (array_name[record] >> offset) & 3
 
 
 # setBit() returns an integer with the bit at 'bit_num' set to 1.
 def setBit(array_name, bit_num):
-    record = bit_num >> 5
-    offset = bit_num & 31
+    record = bit_num >> 6
+    offset = bit_num & 63
     mask = 1 << offset
     array_name[record] |= mask
     return array_name[record]
@@ -58,8 +50,8 @@ def setBit(array_name, bit_num):
 
 # clearBit() returns an integer with the bit at 'bit_num' cleared.
 def clearBit(array_name, bit_num):
-    record = bit_num >> 5
-    offset = bit_num & 31
+    record = bit_num >> 6
+    offset = bit_num & 63
     mask = ~(1 << offset)
     array_name[record] &= mask
     return array_name[record]
@@ -67,8 +59,8 @@ def clearBit(array_name, bit_num):
 
 # toggleBit() returns an integer with the bit at 'bit_num' inverted, 0 -> 1 and 1 -> 0.
 def toggleBit(array_name, bit_num):
-    record = bit_num >> 5
-    offset = bit_num & 31
+    record = bit_num >> 6
+    offset = bit_num & 63
     mask = 1 << offset
     array_name[record] ^= mask
     return array_name[record]

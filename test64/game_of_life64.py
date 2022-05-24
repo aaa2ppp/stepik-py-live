@@ -1,7 +1,7 @@
 from enum import IntEnum
 from typing import Optional, List, Tuple
 
-from util.bitarray import makeBitArray, setBit, testBit, getTwoBit
+from test64.bitarray64 import makeBitArray, setBit, testBit, getTwoBit
 from util.session import SessionContext
 
 
@@ -36,9 +36,7 @@ class CellGeneration:
                     raise ValueError(f"`height` must be natural number, got {height}")
                 self._height = height
 
-            # We allocate 2 bits per cell and align the row with a 32-bit word to speed up
-            # the calculation of neighbors (see _create_next_world)
-            self._width2 = (((self._width << 1) + 31) & 0xFFFFFFE0)
+            self._width2 = (((self._width << 1) + 63) & 0xFFFFFFC0)  # выделяем 2 бита, выравниваем по 64 биному слову
             array_size = self._width2 * self._height
             empty_world = tuple(makeBitArray(array_size, fill=0))
 
@@ -48,9 +46,7 @@ class CellGeneration:
             if _world is not None:
                 self._world = _world
             elif random:
-                # fill random and clear all odd bits
-                # TODO: clear unused tail of rows
-                self._world = tuple(n & 0x55555555 for n in makeBitArray(array_size, random=True))
+                self._world = tuple(n & 0x55555555_55555555 for n in makeBitArray(array_size, random=True))
             else:
                 self._world = empty_world
         else:
@@ -99,37 +95,27 @@ class CellGeneration:
         https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life#Rules
         """
 
-        # Index calculating
         #    |   c1  |   c0  |   c2  |
         # ---+-------+-------+-------+
         # r1 | r1+c1 | r1+c0 | r1+c2 |
         # ---+-------+-------+-------+
-        # r0 | r0+c1 | r0+c0 | r0+c2 |
+        # r0 | r0+c1 |   i   | r0+c2 |
         # ---+-------+-------+-------+
         # r2 | r2+c1 | r2+c0 | r2+c2 |
         # ---+-------+-------+-------+
 
-        width2 = ((width << 1) + 31) & 0xFFFFFFE0
+        width2 = ((width << 1) + 63) & 0xFFFFFFC0
         size = width2 * height
 
-        # Let's calculate the vertical neighbors for each 1x3 rectangle. To speed up, we sum numbers instead of bits
-        # (each 32-bit integer number contains 16 2-bit cells).
-
         subtotals = makeBitArray(size)
-        n_width2 = width2 >> 5
-        n_size = size >> 5
+        n_size = size >> 6
+        n_width2 = width2 >> 6
 
         for r0 in range(0, n_size, n_width2):
             r1 = (r0 - n_width2) % n_size
             r2 = (r0 + n_width2) % n_size
             for c0 in range(n_width2):
                 subtotals[r0 + c0] = world[r0 + c0] + world[r1 + c0] + world[r2 + c0]
-
-        # Now let's sum horizontally and calculate all the neighbors in each 3x3 square. After that, we subtract one 
-        # if the central cell is live.
-
-        # NOTE: This can also be accelerated by working with numbers instead of bits. 
-        #  But it will take 4 bits for each cell, and getting the index will become more complicated. 
 
         new_world = makeBitArray(size)
 
@@ -139,12 +125,12 @@ class CellGeneration:
                 c2 = (c0 + 2) % width2
 
                 i = r0 + c0
-                cell_is_live = testBit(world, i)
+                state = testBit(world, i)
                 neighbours = (getTwoBit(subtotals, r0 + c0) +
                               getTwoBit(subtotals, r0 + c1) +
-                              getTwoBit(subtotals, r0 + c2) - cell_is_live)
+                              getTwoBit(subtotals, r0 + c2) - state)
 
-                if cell_is_live:
+                if state:
                     if neighbours in (2, 3):
                         setBit(new_world, i)
                 else:
