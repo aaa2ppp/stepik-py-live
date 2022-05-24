@@ -155,7 +155,7 @@ class GameOfLife(metaclass=GameOfLifeMeta):
 
     def get_generation(self, serial: int) -> CellGeneration:
         if serial < 0:
-            raise ValueError(f"`serial` must be positive number, get {serial}")
+            raise ValueError(f"`serial` must be positive number, got {serial}")
 
         if self._generations is None:
             raise NoGenerationError("First need to call the `create_new_life` function")
