@@ -38,7 +38,7 @@ class CellGeneration:
 
             # We allocate 2 bits per cell and align the row with a 32-bit word to speed up
             # the calculation of neighbors (see _create_next_world)
-            self._width2 = (((self._width << 1) + 31) & 0xFFFFFFE0)
+            self._width2 = ((self._width + 15 << 1) & 0xFFFFFFE0)
             array_size = self._width2 * self._height
             empty_world = tuple(makeBitArray(array_size, fill=0))
 
@@ -109,7 +109,7 @@ class CellGeneration:
         # r2 | r2+c1 | r2+c0 | r2+c2 |
         # ---+-------+-------+-------+
 
-        width2 = ((width << 1) + 31) & 0xFFFFFFE0
+        width2 = (width + 15 << 1) & 0xFFFFFFE0
         size = width2 * height
 
         # Let's calculate the vertical neighbors for each 1x3 rectangle. To speed up, we sum numbers instead of bits
@@ -135,21 +135,24 @@ class CellGeneration:
 
         for r0 in range(0, size, width2):
             for c0 in range(0, width << 1, 2):
-                c1 = (c0 - 2) % width2
-                c2 = (c0 + 2) % width2
+                c1 = (c0 - 2) % width
+                c2 = (c0 + 2) % width
 
                 i = r0 + c0
                 cell_is_live = testBit(world, i)
-                neighbours = (getTwoBit(subtotals, r0 + c0) +
+                neighbours = (getTwoBit(subtotals, i) +
                               getTwoBit(subtotals, r0 + c1) +
                               getTwoBit(subtotals, r0 + c2) - cell_is_live)
 
-                if cell_is_live:
-                    if neighbours in (2, 3):
-                        setBit(new_world, i)
-                else:
-                    if neighbours == 3:
-                        setBit(new_world, i)
+                if neighbours == 3 or cell_is_live and neighbours == 2:
+                    setBit(new_world, i)
+
+                # if cell_is_live:
+                #     if neighbours in (2, 3):
+                #         setBit(new_world, i)
+                # else:
+                #     if neighbours == 3:
+                #         setBit(new_world, i)
 
         return tuple(new_world)
 
