@@ -106,18 +106,16 @@ class WorldFactory:
                 i2 = r0 + (c0 + 1) % row_size
 
                 # TODO: проверить что не "навалял"
-                x = ((subtotals[i] +
+                x = (subtotals[i] +
                       ((subtotals[i] & 0x0FFF_FFFF_FFFF_FFFF) << 4) + (subtotals[i1] >> 60) +
-                      (subtotals[i] >> 4) + ((subtotals[i2] & 0xF) << 60)) &
-                     0x7777_7777_7777_7777 |
-                     (world[i] << 3))
+                      (subtotals[i] >> 4) + ((subtotals[i2] & 0xF) << 60))
 
                 # (X₀ & X₁ & ̅X₂ & ̅X₃) V (̅X₁ & X₂ & X₃)
 
-                x0 = (x & 0x8888_8888_8888_8888) >> 3
-                x1 = (x & 0x4444_4444_4444_4444) >> 2
-                x2 = (x & 0x2222_2222_2222_2222) >> 1
-                x3 = (x & 0x1111_1111_1111_1111)
+                x0 = world[i] & 0x1111_1111_1111_1111
+                x1 = (x >> 2) & 0x1111_1111_1111_1111
+                x2 = (x >> 1) & 0x1111_1111_1111_1111
+                x3 = x & 0x1111_1111_1111_1111
 
                 new_world[i] = x0 & x1 & ~x2 & ~x3 | ~x1 & x2 & x3
 
