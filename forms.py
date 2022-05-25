@@ -5,7 +5,7 @@ from flask_wtf import FlaskForm
 from util.session import SessionService, SessionContext
 
 _WORLD_MIN_SIZE = 1
-_WORLD_MAX_SIZE = 100
+_WORLD_MAX_SIZE = 200
 _WORLD_DEFAULT_SIZE = 25
 
 
@@ -14,15 +14,15 @@ class WorldSizeForm(FlaskForm):
         super().__init__()
         self._context_data = context.get_dict(self.__class__)
 
-    height = IntegerField("Высота мира",
-                          default=lambda: _get_default_value('height', _WORLD_DEFAULT_SIZE),
-                          validators=[InputRequired(),
-                                      NumberRange(_WORLD_MIN_SIZE, _WORLD_MAX_SIZE)])
-
     width = IntegerField("Ширина мира",
                          default=lambda: _get_default_value('width', _WORLD_DEFAULT_SIZE),
                          validators=[InputRequired(),
                                      NumberRange(_WORLD_MIN_SIZE, _WORLD_MAX_SIZE)])
+
+    height = IntegerField("Высота мира",
+                          default=lambda: _get_default_value('height', _WORLD_DEFAULT_SIZE),
+                          validators=[InputRequired(),
+                                      NumberRange(_WORLD_MIN_SIZE, _WORLD_MAX_SIZE)])
 
     serial = IntegerField("Перейти к поколению",
                           default=lambda: _get_default_value('serial', 0),
