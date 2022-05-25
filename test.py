@@ -4,8 +4,8 @@ from game_of_life import CellGeneration
 from util.bitarray import makeBitArray, setBit
 
 count = 100
-width = 2000
-height = 200
+width = 100
+height = 100
 size = width * height
 
 start_time = time.time()

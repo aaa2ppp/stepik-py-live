@@ -40,7 +40,8 @@ def testBit(array_name, bit_num):
     return (array_name[record] >> offset) & 1
 
 
-# testBit() returns value of 2 bit (bit_num, bit_num + 1). bit_num must be even!
+# testBit() returns value of 2 bit (bit_num, bit_num + 1).
+# NOTE: Here bits are not shifted between array elements!
 def getTwoBit(array_name, bit_num):
     record = bit_num >> 5
     offset = bit_num & 31

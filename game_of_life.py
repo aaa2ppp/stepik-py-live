@@ -36,11 +36,11 @@ class CellGeneration:
                     raise ValueError(f"`height` must be natural number, got {height}")
                 self._height = height
 
-            # We allocate 2 bits per cell and align the row with a 32-bit word to speed up
-            # the calculation of neighbors (see _create_next_world)
-            self._width2 = ((self._width + 15 << 1) & 0xFFFFFFE0)
-            array_size = self._width2 * self._height
-            empty_world = tuple(makeBitArray(array_size, fill=0))
+            # We allocate 2 bits per cell and align the row to 32 bits to speed up the calculation of neighbors
+            # (see _create_next_world)
+            self._row_in_bits = ((self._width << 1) + 31) & 0xFFFFFFE0
+            size_in_bits = self._row_in_bits * self._height
+            empty_world = tuple(makeBitArray(size_in_bits, fill=0))
 
             self._prev_world = empty_world  # Now the world was empty, and the Spirit of God hovered over it...
             self._different_worlds = {empty_world}  # always includes an empty world
@@ -48,15 +48,18 @@ class CellGeneration:
             if _world is not None:
                 self._world = _world
             elif random:
-                # fill random and clear all odd bits
-                # TODO: clear unused tail of rows
-                self._world = tuple(n & 0x55555555 for n in makeBitArray(array_size, random=True))
+                # Fill the bit array randomly and clear all odd bits.
+
+                # NOTE: To right compare generation need clear unused tail of rows. But here this is not critical,
+                # because it is very unlikely that the first random  generation will repeat.
+
+                self._world = tuple(num & 0x55555555 for num in makeBitArray(size_in_bits, random=True))
             else:
                 self._world = empty_world
         else:
             self._serial = previous._serial + 1
             self._width = previous._width
-            self._width2 = previous._width2
+            self._row_in_bits = previous._row_in_bits
             self._height = previous._height
             self._prev_world = previous._world
             self._different_worlds = previous._different_worlds
@@ -86,7 +89,7 @@ class CellGeneration:
         return self._is_over
 
     def cell_state(self, row: int, col: int) -> CellState:
-        i = row * self._width2 + (col << 1)
+        i = row * self._row_in_bits + (col << 1)
         return CellState(testBit(self._world, i) + (testBit(self._prev_world, i) << 1))
 
     @staticmethod
@@ -99,7 +102,10 @@ class CellGeneration:
         https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life#Rules
         """
 
-        # Index calculating
+        # Index calculating.
+        # rX - row offset
+        # cX - position in row
+        #
         #    |   c1  |   c0  |   c2  |
         # ---+-------+-------+-------+
         # r1 | r1+c1 | r1+c0 | r1+c2 |
@@ -109,50 +115,56 @@ class CellGeneration:
         # r2 | r2+c1 | r2+c0 | r2+c2 |
         # ---+-------+-------+-------+
 
-        width2 = (width + 15 << 1) & 0xFFFFFFE0
-        size = width2 * height
+        row_used_bits = width << 1  # we use 2 bits per cell
+        row_in_bits = (row_used_bits + 31) & 0xFFFFFFE0  # align row size to 32-bits
+        size_in_bits = row_in_bits * height
 
         # Let's calculate the vertical neighbors for each 1x3 rectangle. To speed up, we sum numbers instead of bits
         # (each 32-bit integer number contains 16 2-bit cells).
 
-        subtotals = makeBitArray(size)
-        n_width2 = width2 >> 5
-        n_size = size >> 5
+        subtotals = makeBitArray(size_in_bits)
+        row_in_int32 = row_in_bits >> 5
+        size_in_int32 = size_in_bits >> 5
 
-        for r0 in range(0, n_size, n_width2):
-            r1 = (r0 - n_width2) % n_size
-            r2 = (r0 + n_width2) % n_size
-            for c0 in range(n_width2):
+        for r0 in range(0, size_in_int32, row_in_int32):
+            r1 = (r0 - row_in_int32) % size_in_int32
+            r2 = (r0 + row_in_int32) % size_in_int32
+            for c0 in range(row_in_int32):
                 subtotals[r0 + c0] = world[r0 + c0] + world[r1 + c0] + world[r2 + c0]
 
         # Now let's sum horizontally and calculate all the neighbors in each 3x3 square. After that, we subtract one 
         # if the central cell is live.
 
-        # NOTE: This can also be accelerated by working with numbers instead of bits. 
+        # NOTE: This can also be accelerated by using numbers instead of bits.
         #  But it will take 4 bits for each cell, and getting the index will become more complicated. 
 
-        new_world = makeBitArray(size)
+        new_world = makeBitArray(size_in_bits)
 
-        for r0 in range(0, size, width2):
-            for c0 in range(0, width << 1, 2):
-                c1 = (c0 - 2) % width
-                c2 = (c0 + 2) % width
+        for r0 in range(0, size_in_bits, row_in_bits):
+            for c0 in range(0, row_used_bits, 2):
+                c1 = (c0 - 2) % row_used_bits
+                c2 = (c0 + 2) % row_used_bits
 
                 i = r0 + c0
+
                 cell_is_live = testBit(world, i)
                 neighbours = (getTwoBit(subtotals, i) +
                               getTwoBit(subtotals, r0 + c1) +
                               getTwoBit(subtotals, r0 + c2) - cell_is_live)
 
-                if neighbours == 3 or cell_is_live and neighbours == 2:
+                if neighbours == 3 or neighbours == 2 and cell_is_live:
                     setBit(new_world, i)
 
-                # if cell_is_live:
-                #     if neighbours in (2, 3):
-                #         setBit(new_world, i)
-                # else:
-                #     if neighbours == 3:
-                #         setBit(new_world, i)
+                # i1 = r0 + c1
+                # i2 = r0 + c2
+                #
+                # cell_is_live = (world[i >> 5] >> (i & 31)) & 1
+                # neighbours = (((subtotals[i >> 5] >> (i & 31)) & 3) +
+                #               ((subtotals[i1 >> 5] >> (i1 & 31)) & 3) +
+                #               ((subtotals[i2 >> 5] >> (i2 & 31)) & 3) - cell_is_live)
+                #
+                # if neighbours == 3 or neighbours == 2 and cell_is_live:
+                #     new_world[i >> 5] |= 1 << (i & 31)
 
         return tuple(new_world)
 
