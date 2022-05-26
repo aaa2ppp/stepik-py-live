@@ -1,4 +1,5 @@
 import os
+from array import array
 
 from util.bitarray import makeBitArray, setBit, testBit
 
@@ -60,8 +61,22 @@ class WorldFactory:
 
         return array_
 
+    def pack(self, old_world, new_world):
+        width, height = self._width, self._height
+        size = width * height
+        result = array('L', (0,) * ((size + 15) >> 4))
+        i = 0
+        for row in range(height):
+            for col in range(width):
+                record = i >> 5
+                offset = i & 31
+                result[record] |= (self.is_live_cell(new_world, row, col) | (
+                            self.is_live_cell(old_world, row, col) << 1)) << offset
+                i += 2
+        return result
+
 
 from .naive import BitArrayWorldFactory, OriginalWorldFactory
 from .world64 import World64Factory
 
-factory = BitArrayWorldFactory if int(os.environ.get('NAIVE', 0)) else World64Factory
+factory = BitArrayWorldFactory if int(os.environ.get('NAIVE_ALGO', 0)) else World64Factory

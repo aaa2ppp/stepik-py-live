@@ -114,11 +114,15 @@ class World64Factory(WorldFactory):
 
     def pack(self, old_world, new_world):
         result = array('L')
+
         for record in range(self._size):
-            num_old = old_world[record]
-            num_new = new_world[record]
+            num = (old_world[record] << 1) | new_world[record]
             num_pack = 0
-            for offset in range(0, 64, 4):
-                num_pack |= (((num_old >> offset << 1) & 2) | ((num_new >> offset) & 1)) << (offset >> 1)
+            offset = 0
+            while num > 0:
+                num_pack |= (num & 3) << offset
+                offset += 2
+                num >>= 4
             result.append(num_pack)
+
         return result

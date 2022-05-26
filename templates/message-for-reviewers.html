@@ -13,7 +13,7 @@
     <h3>Пожалуйста, если Вы столкнетесь с подобными проблемами:</h3>
     <ul>
         <li>Проверьте, что правильно инициализировали проект (см.&nbsp;<em>README.md</em>).</li>
-        <li>Почистите куки для <em>http://127.0.0.1:5000</em>.</li>
+        <li>Почистите в браузере кеш и куки для <em>http://127.0.0.1:5000</em>.</li>
         <li>Перезагрузите страницу, удерживая нажатой клавишу <em>Shift</em>.</li>
         <li>Попробуйте воспользоваться прямыми ссылками:
             <ul>
@@ -26,9 +26,9 @@
                 <li>только на <a href="{{ url_for('new_live', view='world', width=25, height=25, serial=0) }}"><strong>поле&nbsp;игры</strong></a>
                     без стилей и элементов управления (доступен параметр <code>serial</code>);
                 </li>
-                <li>или его <a
-                        href="{{ url_for('new_live', view='plain_world', width=25, height=25, serial=0) }}"><strong>текстовое&nbsp;представление</strong></a>
-                    (это получает js, доступен параметр <code>serial</code>).
+                <li>или <a
+                        href="{{ url_for('new_live', view='plain_world', width=25, height=25, serial=0) }}"><strong>сырые&nbsp;данные</strong></a>,
+                    которые получает js (доступен параметр <code>serial</code>).
                 </li>
             </ul>
         </li>

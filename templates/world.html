@@ -33,7 +33,7 @@
         {%- endif %}
     {%- endmacro -%}
 
-    <table border class="world"> {#- `border` attribute is for testing only -#}
+    <table id="worldTable" border class="world"> {#- `border` attribute is for testing only -#}
         {%- for row in range(generation.height) -%}
             <tr>
                 {% for col in range(generation.width) -%}

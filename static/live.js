@@ -21,6 +21,8 @@
     const CELL_CLASS = ['empty-cell', 'living-cell', 'dead-cell', 'surviving-cell'];
 
     const worldContainer = getElementById('worldContainer', true);
+    const wordHeader = getElementById("worldHeader");
+    const worldTable = getElementById("worldTable", true);
     const counter = getElementById('counter');
     const refreshButton = getElementById('refreshButton');
     const exitButton = getElementById('exitButton');
@@ -284,7 +286,6 @@
         }
 
         // get header from second line
-        const wordHeader = worldContainer.querySelector("#worldHeader"); // TODO: on init
         if (wordHeader) {
             wordHeader.innerHTML = `<h2>${lines[1]}</h2>`;
         }
@@ -295,9 +296,8 @@
             newCellStates[i] = parseInt(lines[i + 2]);
         }
 
-        const world = worldContainer.querySelector(".world"); // TODO: on init
         let i = 0;
-        for (const tr of world.rows) {
+        for (const tr of worldTable.rows) {
             for (const td of tr.cells) {
                 const record = i >> 4;
                 const offset = (i << 1) & 31;

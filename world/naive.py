@@ -1,3 +1,4 @@
+from array import array
 from random import randint
 
 from util.bitarray import getBit, makeBitArray, setBit, clearBit
