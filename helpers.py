@@ -52,10 +52,10 @@ def invalid_parameter_message(param_name: str, err_message: str):
 #     return response
 
 def render_plain_world(generation):
-    response = Response((
-        str(generation.serial), '\n',
-        "GAME OVER\n" if generation.is_over else "\n",
-        "\n".join(map(str, generation._world_factory.pack(generation._prev_world, generation._world)))))
+    response = Response("\n".join((
+        str(generation.serial),
+        "GAME OVER" if generation.is_over else "",
+        *map(str, generation.get_pack_world()))))
 
     response.headers['Content-Type'] = "text/plain; charset=utf-8"
     return response

@@ -28,12 +28,13 @@
     const FRAME_QUEUE_SIZE = 5;
     const FRAME_QUEUE_TIMEOUT = 10;
     const frameQueue = [];
-    let lastLoadedWorld = parseInt(counter?.textContent);
-    let lastShownWorld = lastLoadedWorld;
+    let latestLoadedWorld = parseInt(counter?.textContent);
+    let latestShownWorld = latestLoadedWorld;
 
     let autoUpdateEnabled;
     let updatePeriod;
     let currentUpdateLoopId = 0;
+    let latestCellStates;
 
     init();
 
@@ -116,7 +117,8 @@
         stopUpdateLoops();
         loadWorldLoop(currentUpdateLoopId).then();
         const loopId = currentUpdateLoopId;
-        setTimeout(() => showWorldLoop(loopId).then(), updatePeriod);
+        // minimal timeout 500 ms to fill the queue
+        setTimeout(() => showWorldLoop(loopId).then(), updatePeriod < 500 ? 500 : updatePeriod);
     }
 
     function stopUpdateLoops() {
@@ -143,10 +145,10 @@
 
         params.set(UPDATE_PERIOD_PARAM, updatePeriod.toString());
 
-        if (isNaN(lastShownWorld)) {
+        if (isNaN(latestShownWorld)) {
             params.delete(WORLD_SERIAL_PARAM)
         } else {
-            params.set(WORLD_SERIAL_PARAM, lastShownWorld.toString());
+            params.set(WORLD_SERIAL_PARAM, latestShownWorld.toString());
         }
 
         history.replaceState(null, null, url);
@@ -159,18 +161,24 @@
     }
 
     async function loadWorldLoop(loopId) {
+        let count = 0;
         while (loopId === currentUpdateLoopId) {
+
+            if (count % 10 === 0) {
+                console.log("queue size:", frameQueue.length);
+            }
+            count++;
 
             if (frameQueue.length >= FRAME_QUEUE_SIZE) {
                 await sleep(updatePeriod);
                 continue;
             }
 
-            const frame = createFrame(await loadWorld(lastLoadedWorld + 1));
+            const frame = createFrame(await loadWorld(latestLoadedWorld + 1));
             frameQueue.push(frame);
 
             if (!isNaN(frame.serial)) {
-                lastLoadedWorld = frame.serial;
+                latestLoadedWorld = frame.serial;
             }
 
             if (frame.eof) {
@@ -242,7 +250,7 @@
                 showError(frame.html_text)
             } else {
                 showWorld(frame.html_text);
-                lastShownWorld = frame.serial;
+                latestShownWorld = frame.serial;
             }
 
             if (frame.eof) {
@@ -281,26 +289,26 @@
             wordHeader.innerHTML = `<h2>${lines[1]}</h2>`;
         }
 
-        const a = new Uint32Array(lines.length - 2)
-        for (let i = 0; i < a.length; ++i) {
-            a[i] = parseInt(lines[i + 2])
+        // get cell states from next rows
+        const newCellStates = new Uint32Array(lines.length - 2);
+        for (let i = 0; i < newCellStates.length; ++i) {
+            newCellStates[i] = parseInt(lines[i + 2]);
         }
 
-        // get cells from next lines
         const world = worldContainer.querySelector(".world"); // TODO: on init
+        let i = 0;
         for (const tr of world.rows) {
-            const row = tr.sectionRowIndex;
             for (const td of tr.cells) {
-                const col = td.cellIndex;
-                const i = row * tr.cells.length + col
-                const record = Math.floor(i / 16)
-                const offset = (i % 16) * 2
-
-                // const class_index = lines[row + 2].charCodeAt(col) - 48;
-                const class_index = (a[record] >> offset) & 3;
-                td.className = CELL_CLASS[class_index];
+                const record = i >> 4;
+                const offset = (i << 1) & 31;
+                const cell_state = (newCellStates[record] >> offset) & 3;
+                if (latestCellStates === undefined || cell_state !== ((latestCellStates[record] >> offset) & 3)) {
+                    td.className = CELL_CLASS[cell_state];
+                }
+                i++;
             }
         }
+        latestCellStates = newCellStates;
     }
 
     function showError(html_text) {
