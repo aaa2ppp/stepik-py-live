@@ -1,8 +1,6 @@
 from array import array
 from random import randint
 
-from util.bitarray64 import getFourBits, getOneBit, setBit
-
 
 class WorldFactory:
 
