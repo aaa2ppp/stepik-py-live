@@ -7,7 +7,7 @@ class WorldFactory:
     def __init__(self, width, height):
         self._row_size = row_size = self.calc_row_size(width)
         self._size = size = row_size * height
-        self._width = row_size << 4  # FIXME: adjustment of width for 32 bit data alignment
+        self._width = row_size << 4  # FIXME: adjustment of width (to align data across array elements)
         self._height = height
         self._subtotals = array('Q', (0,) * size)
 
