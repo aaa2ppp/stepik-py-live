@@ -2,7 +2,7 @@ from enum import IntEnum
 from typing import Optional, List
 
 from util.session import SessionContext
-from world64 import WorldFactory
+import world
 
 
 class CellState(IntEnum):
@@ -34,7 +34,7 @@ class CellGeneration:
             elif height < 1:
                 raise ValueError(f"`height` must be natural number, got {height}")
 
-            self._world_factory = WorldFactory(width, height)
+            self._world_factory = world.factory(width, height)
 
             empty_world = tuple(self._world_factory.create_empty_world())
             self._prev_world = empty_world  # Now the world was empty, and the Spirit of God hovered over it...
@@ -45,11 +45,12 @@ class CellGeneration:
             else:
                 self._world = empty_world
         else:
+            self._previous = previous
             self._serial = previous._serial + 1
             self._world_factory = previous._world_factory
             self._prev_world = previous._world
             self._different_worlds = previous._different_worlds
-            self._world = tuple(self._world_factory.create_next_world(self._prev_world))
+            self._world = tuple(self._world_factory.create_next_world())
 
         self._different_worlds.add(self._world)
         self._is_over = self._serial >= len(self._different_worlds) - 1
@@ -72,7 +73,7 @@ class CellGeneration:
 
     def cell_state(self, row: int, col: int) -> CellState:
         s = self._world_factory
-        return CellState(s.cell_is_live(self._world, row, col) + (s.cell_is_live(self._prev_world, row, col) << 1))
+        return CellState(s.is_live_cell(self._world, row, col) + (s.is_live_cell(self._prev_world, row, col) << 1))
 
 
 class GameOfLifeError(Exception):

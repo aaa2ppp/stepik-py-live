@@ -1,7 +1,6 @@
-import time
 from functools import wraps
 
-from flask import request, url_for, redirect, render_template, Response, make_response
+from flask import request, url_for, redirect, render_template, Response
 
 from util.session import SessionService
 

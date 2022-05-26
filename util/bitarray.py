@@ -5,7 +5,7 @@ from random import randint
 
 
 def makeBitArray(bitSize, fill=0, random=False):
-    intSize = (bitSize + 31) >> 5  # number of 32 bit integers
+    intSize = (bitSize + 31) >> 5  # number of 32-bit integers
 
     if fill == 1:
         fill = 4294967295  # all bits set
@@ -25,16 +25,16 @@ def makeBitArray(bitSize, fill=0, random=False):
     return bitArray
 
 
-# # testBit() returns a nonzero result, 2**offset, if the bit at 'bit_num' is set to 1.
-# def testBit(array_name, bit_num):
-#     record = bit_num >> 5
-#     offset = bit_num & 31
-#     mask = 1 << offset
-#     return array_name[record] & mask
+# testBit() returns a nonzero result, 2**offset, if the bit at 'bit_num' is set to 1.
+def testBit(array_name, bit_num):
+    record = bit_num >> 5
+    offset = bit_num & 31
+    mask = 1 << offset
+    return array_name[record] & mask
 
 
 # getOneBit() returns 1 if bit is set or 0 otherwise.
-def getOneBit(array_name, bit_num):
+def getBit(array_name, bit_num):
     record = bit_num >> 5
     offset = bit_num & 31
     return (array_name[record] >> offset) & 1
