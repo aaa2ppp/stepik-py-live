@@ -12,7 +12,6 @@ class WorldFactory:
         self._width = row_size << 4  # FIXME: adjustment of width for 32 bit data alignment
         self._height = height
         self._subtotals = array('Q', (0,) * size)
-        self._neighbours = array('Q', (0,) * size)
 
     @property
     def width(self):
@@ -24,7 +23,7 @@ class WorldFactory:
 
     @staticmethod
     def calc_row_size(width):
-        # To performance, we allocate 4 bits per cell and align the row size by 32 bits.
+        # To performance, we allocate 4 bits per cell and align the row size by 64 bits.
         return ((width << 2) + 63) >> 6
 
     def cell_is_live(self, world, row, col):
@@ -73,30 +72,7 @@ class WorldFactory:
                 i = r0 + c0
                 subtotals[i] = world[i] + world[r1 + c0] + world[r2 + c0]
 
-        # Now let's sum horizontally to calculate all the neighbors in each 3x3 square and after to subtract state of
-        # the central cell.
-
-        # neighbours = self._neighbours
-        # for r0 in range(0, size, row_size):
-        #     for c0 in range(row_size):
-        #         i = r0 + c0
-        #         i1 = r0 + (c0 - 1) % row_size
-        #         i2 = r0 + (c0 + 1) % row_size
-        #
-        #         neighbours[i] = ((subtotals[i] +
-        #                           ((subtotals[i] & 0x0FFF_FFFF_FFFF_FFFF) << 4) + (subtotals[i1] >> 60) +
-        #                           (subtotals[i] >> 4) + ((subtotals[i2] & 0xF) << 60)) &
-        #                          0x7777_7777_7777_7777 |
-        #                          (world[i] << 3))
-        #
-        # # Fill new world
-        # # TODO: This can also be optimized
-        #
-        # new_world = array('Q', (0,) * size)
-        # for i in range(0, size << 6, 4):
-        #     count = getFourBits(neighbours, i)
-        #     if count == 3 or count == 11 or count == 12:
-        #         setBit(new_world, i)
+        # Now let's sum horizontally to calculate all the neighbors in each 3x3 square...
 
         new_world = array('Q', (0,) * size)
         for r0 in range(0, size, row_size):
@@ -105,18 +81,18 @@ class WorldFactory:
                 i1 = r0 + (c0 - 1) % row_size
                 i2 = r0 + (c0 + 1) % row_size
 
-                # TODO: проверить что не "навалял"
                 x = (subtotals[i] +
-                      ((subtotals[i] & 0x0FFF_FFFF_FFFF_FFFF) << 4) + (subtotals[i1] >> 60) +
-                      (subtotals[i] >> 4) + ((subtotals[i2] & 0xF) << 60))
+                     ((subtotals[i] & 0x0FFF_FFFF_FFFF_FFFF) << 4) + (subtotals[i1] >> 60) +
+                     (subtotals[i] >> 4) + ((subtotals[i2] & 0xF) << 60))
 
+                # Bit magic
                 # (X₀ & X₁ & ̅X₂ & ̅X₃) V (̅X₁ & X₂ & X₃)
+                # TODO: проверить что не "навалял"
 
                 x0 = world[i] & 0x1111_1111_1111_1111
                 x1 = (x >> 2) & 0x1111_1111_1111_1111
                 x2 = (x >> 1) & 0x1111_1111_1111_1111
                 x3 = x & 0x1111_1111_1111_1111
-
                 new_world[i] = x0 & x1 & ~x2 & ~x3 | ~x1 & x2 & x3
 
         return new_world
