@@ -38,15 +38,24 @@ def invalid_parameter_message(param_name: str, err_message: str):
     return render_template("error.html", message=message, code=code), code
 
 
+# def render_plain_world(generation):
+#     # first two lines
+#     text = ["".join((str(generation.serial), '\n', "GAME OVER\n" if generation.is_over else "\n"))]
+#
+#     width = generation.width
+#     for row in range(generation.height):
+#         text.append("".join(chr(generation.cell_state(row, col).value + 48) for col in range(width)))
+#         text.append('\n')
+#
+#     response = Response("".join(text))
+#     response.headers['Content-Type'] = "text/plain; charset=utf-8"
+#     return response
+
 def render_plain_world(generation):
-    # first two lines
-    text = ["".join((str(generation.serial), '\n', "GAME OVER\n" if generation.is_over else "\n"))]
+    response = Response((
+        str(generation.serial), '\n',
+        "GAME OVER\n" if generation.is_over else "\n",
+        "\n".join(map(str, generation._world_factory.pack(generation._prev_world, generation._world)))))
 
-    width = generation.width
-    for row in range(generation.height):
-        text.append("".join(chr(generation.cell_state(row, col).value + 48) for col in range(width)))
-        text.append('\n')
-
-    response = Response("".join(text))
     response.headers['Content-Type'] = "text/plain; charset=utf-8"
     return response

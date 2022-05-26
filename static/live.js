@@ -281,13 +281,23 @@
             wordHeader.innerHTML = `<h2>${lines[1]}</h2>`;
         }
 
+        const a = new Uint32Array(lines.length - 2)
+        for (let i = 0; i < a.length; ++i) {
+            a[i] = parseInt(lines[i + 2])
+        }
+
         // get cells from next lines
         const world = worldContainer.querySelector(".world"); // TODO: on init
         for (const tr of world.rows) {
             const row = tr.sectionRowIndex;
             for (const td of tr.cells) {
                 const col = td.cellIndex;
-                const class_index = lines[row + 2].charCodeAt(col) - 48;
+                const i = row * tr.cells.length + col
+                const record = Math.floor(i / 16)
+                const offset = (i % 16) * 2
+
+                // const class_index = lines[row + 2].charCodeAt(col) - 48;
+                const class_index = (a[record] >> offset) & 3;
                 td.className = CELL_CLASS[class_index];
             }
         }

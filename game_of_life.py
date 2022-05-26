@@ -50,7 +50,7 @@ class CellGeneration:
             self._world_factory = previous._world_factory
             self._prev_world = previous._world
             self._different_worlds = previous._different_worlds
-            self._world = tuple(self._world_factory.create_next_world())
+            self._world = tuple(self._world_factory.create_next_world(self._prev_world))
 
         self._different_worlds.add(self._world)
         self._is_over = self._serial >= len(self._different_worlds) - 1

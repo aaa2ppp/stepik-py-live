@@ -1,7 +1,7 @@
 from array import array
 from random import randint
 
-from util.bitarray import getBit
+from util.bitarray import getBit, makeBitArray
 from world import WorldFactory
 
 
@@ -111,3 +111,14 @@ class World64Factory(WorldFactory):
             new_world[record] = n
 
         return new_world
+
+    def pack(self, old_world, new_world):
+        result = array('L')
+        for record in range(self._size):
+            num_old = old_world[record]
+            num_new = new_world[record]
+            num_pack = 0
+            for offset in range(0, 64, 4):
+                num_pack |= (((num_old >> offset << 1) & 2) | ((num_new >> offset) & 1)) << (offset >> 1)
+            result.append(num_pack)
+        return result
