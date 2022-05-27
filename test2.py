@@ -2,66 +2,57 @@ import time
 import world
 
 count = 100
-width, height = 256, 256  # `width` must be a multiple of 16!
 
-wf_bi = world.BitArrayWorldFactory(width, height)
-wf_or = world.OriginalWorldFactory(width, height)
-wf_64 = world.World64Factory(width, height)
+# Now to correctly compare with the `world64`, the `width` must be a multiple of 16!
+width, height = 256, 256
 
-bitarr_world = wf_bi.create_random_world()
-orig_world = wf_or.create_world_from_bitarray(bitarr_world)
-world64 = wf_64.create_world_from_bitarray(bitarr_world)
+factory1 = world.OrigWorldFactory(width, height)
+factory2 = world.BitArrayWorldFactory(width, height)
+factory3 = world.World64Factory(width, height)
 
-# print("bitarray:", bitarray_world)
-# print("original:", wf_or.convert_world_to_bitarray(orig_world))
-# print("world64 :", wf_64.convert_world_to_bitarray(world64))
+world1 = factory1.create_random_world()
+array_ = factory1.pack_world_to_array(world1)
 
-if bitarr_world != wf_or.convert_world_to_bitarray(orig_world):
-    print("FAIL: can't convert orig_world")
+world2 = factory2.create_world_from_pack(array_)
+if factory2.pack_world_to_array(world2) != array_:
+    print("FAIL: create (or pack) bitarray world")
     quit(1)
 
-if bitarr_world != wf_64.convert_world_to_bitarray(world64):
-    print("FAIL: can't convert world64")
+world3 = factory3.create_world_from_pack(array_)
+if factory3.pack_world_to_array(world3) != array_:
+    print("FAIL: create (or pack) world64")
     quit(1)
 
-orig_time, bitarr_time, world64_time = 0.0, 0.0, 0.0
+time1, time2, time3 = 0.0, 0.0, 0.0
 
 for _ in range(count):
     start_time = time.time()
-    old_world = bitarr_world
-    bitarr_world = wf_bi.create_next_world(bitarr_world)
-    bitarr_pack = wf_bi.pack(old_world, bitarr_world)
-    bitarr_time += time.time() - start_time
+    _old_world = world1
+    world1 = factory1.create_next_world(world1)
+    pack1 = factory1.pack_two_worlds_to_array(_old_world, world1)
+    time1 += time.time() - start_time
 
     start_time = time.time()
-    old_world = orig_world
-    orig_world = wf_or.create_next_world(orig_world)
-    orig_pack = wf_or.pack(old_world, orig_world)
-    orig_time += time.time() - start_time
+    _old_world = world2
+    world2 = factory2.create_next_world(world2)
+    pack2 = factory2.pack_two_worlds_to_array(_old_world, world2)
+    time2 += time.time() - start_time
 
     start_time = time.time()
-    old_world = world64
-    world64 = wf_64.create_next_world(world64)
-    world64_pack = wf_64.pack(old_world, world64)
-    world64_time += time.time() - start_time
+    _old_world = world3
+    world3 = factory3.create_next_world(world3)
+    pack3 = factory3.pack_two_worlds_to_array(_old_world, world3)
+    time3 += time.time() - start_time
 
-    if bitarr_pack != orig_pack:
-        print("FAIL: origin_pack")
+    if pack2 != pack1:
+        print("FAIL: next bitarray")
         quit(1)
 
-    if bitarr_pack != world64_pack:
-        print("FAIL: world64_pack")
-        quit(1)
-
-    if bitarr_world != wf_or.convert_world_to_bitarray(orig_world):
-        print("FAIL: orig_world")
-        quit(1)
-
-    if bitarr_world != wf_64.convert_world_to_bitarray(world64):
-        print("FAIL: world64")
+    if pack3 != pack1:
+        print("FAIL: next world64")
         quit(1)
 
 print("SUCCESS")
-print(f"original time: {orig_time} ms")
-print(f"bitarray time: {bitarr_time} ms")
-print(f"world64 time: {world64_time} ms")
+print(f"original time: {time1} ms")
+print(f"bitarray time: {time2} ms")
+print(f"world64 time : {time3} ms")

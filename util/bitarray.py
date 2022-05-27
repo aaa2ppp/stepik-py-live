@@ -8,7 +8,7 @@ def makeBitArray(bitSize, fill=0, random=False):
     intSize = (bitSize + 31) >> 5  # number of 32-bit integers
 
     if fill == 1:
-        fill = 4294967295  # all bits set
+        fill = 0xFFFF_FFFF  # all bits set
     else:
         fill = 0  # all bits cleared
 
@@ -16,11 +16,12 @@ def makeBitArray(bitSize, fill=0, random=False):
 
     if random:
         for _ in range(intSize):
-            bitArray.append(randint(0, 0xFFFFFFFF))
+            bitArray.append(randint(0, 0xFFFF_FFFF))
     else:
         bitArray.extend((fill,) * intSize)
 
-    bitArray[-1] &= (0xFFFFFFFF >> (32 - bitSize & 31))  # to correctly compare arrays, clear the unused tail
+    # To be able to correctly compare, we clean up the unused tail.
+    bitArray[-1] &= (0xFFFF_FFFF >> (32 - bitSize & 31))
 
     return bitArray
 

@@ -119,8 +119,8 @@
         stopUpdateLoops();
         loadWorldLoop(currentUpdateLoopId).then();
         const loopId = currentUpdateLoopId;
-        // minimal timeout 500 ms to fill the queue
-        setTimeout(() => showWorldLoop(loopId).then(), updatePeriod < 500 ? 500 : updatePeriod);
+        // minimal timeout 300 ms to fill the queue
+        setTimeout(() => showWorldLoop(loopId).then(), updatePeriod < 300 ? 300 : updatePeriod);
     }
 
     function stopUpdateLoops() {

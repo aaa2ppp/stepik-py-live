@@ -5,7 +5,7 @@ from util.bitarray import getBit, makeBitArray, setBit, clearBit
 from world import WorldFactory
 
 
-class OriginalWorldFactory(WorldFactory):
+class OrigWorldFactory(WorldFactory):
 
     def is_live_cell(self, world, row: int, col: int) -> bool:
         return world[row][col]
@@ -56,23 +56,30 @@ class OriginalWorldFactory(WorldFactory):
 
 class BitArrayWorldFactory(WorldFactory):
 
-    def __init__(self, width: int, height: int):
-        super().__init__(width, height)
+    def __init__(self, width, height):
+        super(BitArrayWorldFactory, self).__init__(width, height)
+
+        # To performance pack old and new worlds, we allocate 2 bit per cell
+        self._row_size = row_size = width << 1
+        self._size = row_size * height
 
     def is_live_cell(self, world, row: int, col: int):
-        return getBit(world, row * self._width + col)
+        return getBit(world, row * self._row_size + (col << 1))
 
     def revive_cell(self, world, row: int, col: int):
-        setBit(world, row * self._width + col)
+        setBit(world, row * self._row_size + (col << 1))
 
     def kill_cell(self, world, row: int, col: int):
-        clearBit(world, row * self._width + col)
+        clearBit(world, row * self._row_size + (col << 1))
 
     def create_empty_world(self):
-        return makeBitArray(self._width * self._height, fill=0)
+        return makeBitArray(self._size, fill=0)
 
     def create_random_world(self):
-        return makeBitArray(self._width * self._height, random=True)
+        new_world = makeBitArray(self._size, random=True)
+        for record in range(len(new_world)):
+            new_world[record] &= 0x5555_5555
+        return new_world
 
     def create_next_world(self, world):
         """
@@ -83,8 +90,7 @@ class BitArrayWorldFactory(WorldFactory):
         https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life#Rules
         """
 
-        width, height = self._width, self._height
-        size = width * height
+        size, row_size, height = self._size, self._row_size, self._height
         new_world = makeBitArray(size)
 
         # Calculate indexes
@@ -100,13 +106,13 @@ class BitArrayWorldFactory(WorldFactory):
         # r2 | r2+c1 | r2+c0 | r2+c2 |
         # ---+-------+-------+-------+
 
-        for r0 in range(0, size, width):
-            r1 = (r0 - width) % size
-            r2 = (r0 + width) % size
+        for r0 in range(0, size, row_size):
+            r1 = (r0 - row_size) % size
+            r2 = (r0 + row_size) % size
 
-            for c0 in range(width):
-                c1 = (c0 - 1) % width
-                c2 = (c0 + 1) % width
+            for c0 in range(0, row_size, 2):
+                c1 = (c0 - 2) % row_size
+                c2 = (c0 + 2) % row_size
 
                 neighbours = (getBit(world, r0 + c1) + getBit(world, r0 + c2) +
                               getBit(world, r1 + c1) + getBit(world, r1 + c2) + getBit(world, r1 + c0) +
@@ -117,3 +123,9 @@ class BitArrayWorldFactory(WorldFactory):
                     setBit(new_world, i)
 
         return new_world
+
+    def pack_two_worlds_to_array(self, old_world, new_world):
+        result = array('L')
+        for num0, num1 in zip(new_world, old_world):
+            result.append(num0 | (num1 << 1))
+        return result

@@ -76,7 +76,7 @@ class CellGeneration:
         return CellState(s.is_live_cell(self._world, row, col) + (s.is_live_cell(self._prev_world, row, col) << 1))
 
     def get_pack_world(self):
-        return self._world_factory.pack(self._prev_world, self._world)
+        return self._world_factory.pack_two_worlds_to_array(self._prev_world, self._world)
 
 
 class GameOfLifeError(Exception):

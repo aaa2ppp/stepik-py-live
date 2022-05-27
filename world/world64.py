@@ -1,7 +1,7 @@
 from array import array
 from random import randint
 
-from util.bitarray import getBit, makeBitArray
+from util.bitarray import getBit
 from world import WorldFactory
 
 
@@ -9,16 +9,15 @@ class World64Factory(WorldFactory):
 
     def __init__(self, width, height):
         super().__init__(width, height)
-        self._row_size = row_size = self.calc_row_size(width)
-        self._width = row_size << 4  # FIXME: adjustment of width (to align data across array elements)
+
+        # To improve the performance of the world calculation, we store the world in an array of 64-bit integers,
+        # allocate 4 bits per cell, and size the strings to the size of the array elements.
+        self._row_size = row_size = ((width << 2) + 63) >> 6
         self._size = size = row_size * height
-        self._world = array('Q', (0,) * size)
         self._subtotals = array('Q', (0,) * size)
 
-    @staticmethod
-    def calc_row_size(width):
-        # To performance, we allocate 4 bits per cell and align the row size by 64 bits.
-        return ((width << 2) + 63) >> 6
+        # FIXME: adjusting the width of world (to align the data row with the array elements)
+        self._width = row_size << 4
 
     def is_live_cell(self, world, row, col):
         record = row * self._row_size + (col >> 4)
@@ -39,7 +38,7 @@ class World64Factory(WorldFactory):
         return array('Q', (0,) * self._size)
 
     def create_random_world(self):
-        return array('Q', (randint(0, 0xFFFF_FFFF_FFFF_FFFFF) & 0x1111_1111_1111_1111 for _ in range(self._size)))
+        return array('Q', (randint(0, 0xFFFF_FFFF_FFFF_FFFF) & 0x1111_1111_1111_1111 for _ in range(self._size)))
 
     def create_next_world(self, world):
         """
@@ -64,9 +63,10 @@ class World64Factory(WorldFactory):
         # ---+-------+-------+-------+
 
         row_size, size, subtotals = self._row_size, self._size, self._subtotals
+        new_world = array('Q', (0,) * size)
 
-        # Let's calculate the vertical neighbors for each 1x3 rectangle. To speed up, we sum 64-bit numbers instead
-        # of bits.
+        # Let's calculate the vertical neighbors for each 1x3 rectangle. To speed up, we sum 64-bit integer numbers
+        # instead of bits.
 
         for r0 in range(0, size, row_size):
             r1 = (r0 - row_size) % size
@@ -77,7 +77,6 @@ class World64Factory(WorldFactory):
 
         # Now let's sum horizontally to calculate all the neighbors in each 3x3 square...
 
-        new_world = array('Q', (0,) * size)
         for r0 in range(0, size, row_size):
             for c0 in range(row_size):
                 i = r0 + c0
@@ -88,7 +87,7 @@ class World64Factory(WorldFactory):
                      ((subtotals[i] & 0x0FFF_FFFF_FFFF_FFFF) << 4) + (subtotals[i1] >> 60) +
                      (subtotals[i] >> 4) + ((subtotals[i2] & 0xF) << 60))
 
-                # Use bit magic to get new state
+                # Use bit magic to get new state of cells
                 # (X₀ & X₁ & ̅X₂ & ̅X₃) V (̅X₁ & X₂ & X₃)
 
                 x0 = world[i]
@@ -99,27 +98,28 @@ class World64Factory(WorldFactory):
 
         return new_world
 
-    def create_world_from_bitarray(self, array_):
-        new_world = self.create_empty_world()
+    def create_world_from_pack(self, array_):
+        size = self._size
+        new_world = array('Q', (0,) * size)
 
         i = 0
-        for record in range(self._size):
-            n = 0
+        for record in range(size):
+            num = 0
             for offset in range(0, 64, 4):
-                n |= (getBit(array_, i) << offset)
+                num |= (getBit(array_, i) << offset)
                 i += 1
-            new_world[record] = n
+            new_world[record] = num
 
         return new_world
 
-    def pack(self, old_world, new_world):
+    def pack_two_worlds_to_array(self, old_world, new_world):
         result = array('L')
 
-        for record in range(self._size):
-            num = (old_world[record] << 1) | new_world[record]
+        for num0, num1 in zip(new_world, old_world):
+            num = num0 | (num1 << 1)
             num_pack = 0
             offset = 0
-            while num > 0:
+            while num != 0:
                 num_pack |= (num & 3) << offset
                 offset += 2
                 num >>= 4
