@@ -34,13 +34,13 @@ class World64Factory(WorldFactory):
         offset = (col << 2) & 63
         world[record] &= ~(1 << offset)
 
-    def create_empty_world(self):
+    def _create_empty_world(self):
         return array('Q', (0,) * self._size)
 
-    def create_random_world(self):
+    def _create_random_world(self):
         return array('Q', (randint(0, 0xFFFF_FFFF_FFFF_FFFF) & 0x1111_1111_1111_1111 for _ in range(self._size)))
 
-    def create_next_world(self, world):
+    def _create_next_world(self, world):
         """
         1. Any live cell with two or three live neighbours survives.
         2. Any dead cell with three live neighbours becomes a live cell.
@@ -98,7 +98,7 @@ class World64Factory(WorldFactory):
 
         return new_world
 
-    def create_world_from_pack(self, array_):
+    def next_from_array(self, array_):
         size = self._size
         new_world = array('Q', (0,) * size)
 
@@ -112,7 +112,7 @@ class World64Factory(WorldFactory):
 
         return new_world
 
-    def pack_two_worlds_to_array(self, old_world, new_world):
+    def _pack_two_worlds_to_array(self, old_world, new_world):
         result = array('L')
 
         for num0, num1 in zip(new_world, old_world):

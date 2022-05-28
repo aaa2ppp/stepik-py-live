@@ -36,12 +36,12 @@ class CellGeneration:
 
             self._world_factory = world.factory(width, height)
 
-            empty_world = tuple(self._world_factory.create_empty_world())
+            empty_world = tuple(self._world_factory._create_empty_world())
             self._prev_world = empty_world  # Now the world was empty, and the Spirit of God hovered over it...
             self._different_worlds = {empty_world}  # always includes an empty world
 
             if random:
-                self._world = tuple(self._world_factory.create_random_world())
+                self._world = tuple(self._world_factory._create_random_world())
             else:
                 self._world = empty_world
         else:
@@ -50,7 +50,7 @@ class CellGeneration:
             self._world_factory = previous._world_factory
             self._prev_world = previous._world
             self._different_worlds = previous._different_worlds
-            self._world = tuple(self._world_factory.create_next_world(self._prev_world))
+            self._world = tuple(self._world_factory._create_next_world(self._prev_world))
 
         self._different_worlds.add(self._world)
         self._is_over = self._serial >= len(self._different_worlds) - 1
@@ -76,7 +76,7 @@ class CellGeneration:
         return CellState(s.is_live_cell(self._world, row, col) + (s.is_live_cell(self._prev_world, row, col) << 1))
 
     def get_pack_world(self):
-        return self._world_factory.pack_two_worlds_to_array(self._prev_world, self._world)
+        return self._world_factory._pack_two_worlds_to_array(self._prev_world, self._world)
 
 
 class GameOfLifeError(Exception):
