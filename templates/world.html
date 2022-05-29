@@ -26,14 +26,15 @@
 
         {% if cell_size and (row == 0 or col == 0) -%}
             {# cell value is for testing only -#}
-            <td class="{{ cell_state.name }}-cell"><div style="{{ cell_size }}">{{ ('', 'x', 'D', 'X')[cell_state.value] }}</div></td>
+            <td class="cell {{ cell_state.name }}-cell"><div style="{{ cell_size }}">{{ ('', 'x', 'D', 'X')[cell_state.value] }}</div></td>
         {%- else -%}
             {# cell value is for testing only -#}
-            <td class="{{ cell_state.name }}-cell">{{ ('', 'x', 'D', 'X')[cell_state.value] }}</td>
+            <td class="cell {{ cell_state.name }}-cell">{{ ('', 'x', 'D', 'X')[cell_state.value] }}</td>
         {%- endif %}
     {%- endmacro -%}
 
     <table id="worldTable" border class="world"> {#- `border` attribute is for testing only -#}
+        <tbody>
         {%- for row in range(generation.height) -%}
             <tr>
                 {% for col in range(generation.width) -%}
@@ -41,5 +42,6 @@
                 {% endfor -%}
             </tr>
         {%- endfor -%}
+        </tbody>
     </table>
 </div>

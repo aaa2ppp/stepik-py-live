@@ -5,43 +5,37 @@
     padding-top: 0.5rem;
 }
 
-/*
-.world-container {
-}
-*/
+/*.world-container {*/
+/*}*/
 
 .world {
     border-collapse: collapse;
     margin: auto;
     font-size: 0;
     table-layout: fixed;
+    background: whitesmoke;
+}
+
+.cell {
+    /*transition-property: color, background-color;*/
+    /*transition-duration: 100ms;*/
+    border: 1px solid black;
+    padding: 0;
 }
 
 .empty-cell {
-    border: 1px solid black;
-    padding: 0;
-    color: whitesmoke;
     background: whitesmoke;
 }
 
 .living-cell {
-    border: 1px solid black;
-    padding: 0;
-    color: lightgreen;
     background: lightgreen;
 }
 
 .surviving-cell {
-    border: 1px solid black;
-    padding: 0;
-    color: green;
     background: green;
 }
 
 .dead-cell {
-    border: 1px solid black;
-    padding: 0;
-    color: darkred;
     background: darkred;
 }
 

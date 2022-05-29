@@ -18,7 +18,8 @@
     const STOP_LABEL = 'Остановить';
     const CONTINUE_LABEL = 'Продолжить';
 
-    const CELL_CLASS = ['empty-cell', 'living-cell', 'dead-cell', 'surviving-cell'];
+    const CELL_CLASS = ['cell empty-cell', 'cell living-cell', 'cell dead-cell', 'cell surviving-cell'];
+    // const CELL_COLOR = ['whitesmoke', 'lightgreen', 'darkred', 'green'];
 
     const worldContainer = getElementById('worldContainer', true);
     const wordHeader = getElementById("worldHeader");
@@ -119,8 +120,8 @@
         stopUpdateLoops();
         loadWorldLoop(currentUpdateLoopId).then();
         const loopId = currentUpdateLoopId;
-        // minimal timeout 300 ms to fill the queue
-        setTimeout(() => showWorldLoop(loopId).then(), updatePeriod < 300 ? 300 : updatePeriod);
+        // minimal timeout 200 ms to fill the queue
+        setTimeout(() => showWorldLoop(loopId).then(), updatePeriod < 200 ? 200 : updatePeriod);
     }
 
     function stopUpdateLoops() {
@@ -163,13 +164,7 @@
     }
 
     async function loadWorldLoop(loopId) {
-        let count = 0;
         while (loopId === currentUpdateLoopId) {
-
-            if (count % 10 === 0) {
-                console.log("queue size:", frameQueue.length);
-            }
-            count++;
 
             if (frameQueue.length >= FRAME_QUEUE_SIZE) {
                 await sleep(updatePeriod);
@@ -304,6 +299,7 @@
                 const cell_state = (newCellStates[record] >> offset) & 3;
                 if (latestCellStates === undefined || cell_state !== ((latestCellStates[record] >> offset) & 3)) {
                     td.className = CELL_CLASS[cell_state];
+                    // td.style.backgroundColor = CELL_COLOR[cell_state]
                 }
                 i++;
             }
