@@ -1,12 +1,11 @@
 import os
 from array import array
-from abc import ABCMeta, abstractmethod, abstractproperty
+from abc import ABCMeta, abstractmethod
 
 from util.bitarray import makeBitArray, setBit, testBit
 
 
-class WorldFactory:
-
+class AbstractWorldFactory:
     __metaclass__ = ABCMeta
 
     def __init__(self, width: int, height: int):
@@ -45,58 +44,53 @@ class WorldFactory:
     def create_next_world(self, world):
         """Create new world based on the existing world"""
 
-    def create_world_from_pack(self, array_):
-        width, height = self._width, self._height
+    def create_world_from_array(self, array_):
+        """Create new world from the bitarray"""
+
         new_world = self.create_empty_world()
 
         i = 0
-        for row in range(height):
-            for col in range(width):
-                record = i >> 5
-                offset = i & 31
-                if array_[record] & (1 << offset):
+        for row in range(self._height):
+            for col in range(self._width):
+                if testBit(array_, i):
                     self.revive_cell(new_world, row, col)
                 i += 1
 
         return new_world
 
-    def pack_world_to_array(self, world):
-        """Pack the world into an uint32 array (1 bit per cell)"""
+    def pack_world_into_array(self, world):
+        """Pack the world into a bitarray"""
 
-        width, height = self._width, self._height
-        size = width * height
-        result = array('L', (0,) * ((size + 31) >> 5))
+        array_ = makeBitArray(self._width * self._height, fill=0)
 
         i = 0
-        for row in range(height):
-            for col in range(width):
-                record = i >> 5
-                offset = i & 31
-                result[record] |= self.is_live_cell(world, row, col) << offset
+        for row in range(self._height):
+            for col in range(self._width):
+                if self.is_live_cell(world, row, col):
+                    setBit(array_, i)
                 i += 1
 
-        return result
+        return array_
 
-    def pack_two_worlds_to_array(self, old_world, new_world):
-        """Pack two worlds (old and new) into an uint32 array (2 bit per cell)"""
+    def pack_two_worlds_into_array(self, prev_world, cur_world):
+        """Pack two worlds (previous and current) into an uint32 array (2 bit per cell)"""
 
-        width, height = self._width, self._height
-        size = width * height
-        result = array('L', (0,) * ((size + 15) >> 4))
+        size = self._width * self._height * 2
+        array_ = array('L', (0,) * ((size + 31) >> 5))
 
         i = 0
-        for row in range(height):
-            for col in range(width):
+        for row in range(self._height):
+            for col in range(self._width):
+                value = self.is_live_cell(cur_world, row, col) | (self.is_live_cell(prev_world, row, col) << 1)
                 record = i >> 5
                 offset = i & 31
-                result[record] |= (self.is_live_cell(new_world, row, col) | (
-                            self.is_live_cell(old_world, row, col) << 1)) << offset
+                array_[record] |= value << offset
                 i += 2
 
-        return result
+        return array_
 
 
-from .naive import BitArrayWorldFactory, OrigWorldFactory
-from .world64 import World64Factory
-
-factory = BitArrayWorldFactory if int(os.environ.get('NAIVE_ALGO', 0)) else World64Factory
+if int(os.environ.get('NAIVE_ALGO', 0)):
+    from .bitarray import WorldFactory
+else:
+    from .world64 import WorldFactory

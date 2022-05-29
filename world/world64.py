@@ -2,13 +2,13 @@ from array import array
 from random import randint
 
 from util.bitarray import getBit
-from world import WorldFactory
+from world import AbstractWorldFactory
 
 
-class World64Factory(WorldFactory):
+class WorldFactory(AbstractWorldFactory):
 
     def __init__(self, width, height):
-        super().__init__(width, height)
+        super(WorldFactory, self).__init__(width, height)
 
         # To improve the performance of the world calculation, we store the world in an array of 64-bit integers,
         # allocate 4 bits per cell, and size the strings to the size of the array elements.
@@ -83,22 +83,19 @@ class World64Factory(WorldFactory):
                 i1 = r0 + (c0 - 1) % row_size
                 i2 = r0 + (c0 + 1) % row_size
 
-                x = (subtotals[i] +
-                     ((subtotals[i] & 0x0FFF_FFFF_FFFF_FFFF) << 4) + (subtotals[i1] >> 60) +
-                     (subtotals[i] >> 4) + ((subtotals[i2] & 0xF) << 60))
+                neighbors = (subtotals[i] +
+                             ((subtotals[i] & 0x0FFF_FFFF_FFFF_FFFF) << 4) + (subtotals[i1] >> 60) +
+                             (subtotals[i] >> 4) + ((subtotals[i2] & 0xF) << 60))
 
-                # Use bit magic to get new state of cells
-                # (X₀ & X₁ & ̅X₂ & ̅X₃) V (̅X₁ & X₂ & X₃)
-
-                x0 = world[i]
-                x1 = (x >> 2) & 0x1111_1111_1111_1111
-                x2 = (x >> 1) & 0x1111_1111_1111_1111
-                x3 = x & 0x1111_1111_1111_1111
-                new_world[i] = x0 & x1 & ~x2 & ~x3 | ~x1 & x2 & x3
+                # Bit magic to get new cell state
+                x1 = (neighbors >> 2) & 0x1111_1111_1111_1111
+                x2 = (neighbors >> 1) & 0x1111_1111_1111_1111
+                x3 = neighbors & 0x1111_1111_1111_1111
+                new_world[i] = world[i] & x1 & ~x2 & ~x3 | ~x1 & x2 & x3
 
         return new_world
 
-    def create_world_from_pack(self, array_):
+    def create_world_from_array(self, array_):
         size = self._size
         new_world = array('Q', (0,) * size)
 
@@ -112,17 +109,18 @@ class World64Factory(WorldFactory):
 
         return new_world
 
-    def pack_two_worlds_to_array(self, old_world, new_world):
+    def pack_two_worlds_into_array(self, prev_world, cur_world):
         result = array('L')
 
-        for num0, num1 in zip(new_world, old_world):
-            num = num0 | (num1 << 1)
-            num_pack = 0
-            offset = 0
-            while num != 0:
-                num_pack |= (num & 3) << offset
-                offset += 2
-                num >>= 4
-            result.append(num_pack)
+        for num0, num1 in zip(cur_world, prev_world):
+            even = num0 | (num1 << 1)  # ~24% of the time it's 0
+            if even:
+                # Next is bit magic. I don't understand how it works. I took it from
+                # https://www.cyberforum.ru/post13690948.html
+                even |= (even >> 2) & 0x0C0C_0C0C_0C0C_0C0C
+                even = (even & 0x000F_000F_000F_000F) | ((even >> 4) & 0x00F0_00F0_00F0_00F0)
+                even = (even & 0x0000_00FF_0000_00FF) | ((even >> 8) & 0x0000_FF00_0000_FF00)
+                even = (even & 0x0000_0000_0000_FFFF) | ((even >> 16) & 0x0000_0000_FFFF_0000)
+            result.append(even)
 
         return result

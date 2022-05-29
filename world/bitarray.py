@@ -1,65 +1,16 @@
 from array import array
-from random import randint
 
 from util.bitarray import getBit, makeBitArray, setBit, clearBit
-from world import WorldFactory
+from world import AbstractWorldFactory
 
 
-class OrigWorldFactory(WorldFactory):
-
-    def is_live_cell(self, world, row: int, col: int) -> bool:
-        return world[row][col]
-
-    def revive_cell(self, world, row: int, col: int):
-        world[row][col] = 1
-
-    def kill_cell(self, world, row: int, col: int):
-        world[row][col] = 0
-
-    def create_empty_world(self):
-        return [[0 for _ in range(self._width)] for _ in range(self._height)]
-
-    def create_random_world(self):
-        return [[randint(0, 1) for _ in range(self._width)] for _ in range(self._height)]
-
-    def create_next_world(self, world):
-        universe = world
-        new_world = [[0 for _ in range(self._width)] for _ in range(self._height)]
-
-        for i in range(len(universe)):
-            for j in range(len(universe[0])):
-
-                if universe[i][j]:
-                    if self.__get_near(universe, [i, j]) not in (2, 3):
-                        new_world[i][j] = 0
-                        continue
-                    new_world[i][j] = 1
-                    continue
-
-                if self.__get_near(universe, [i, j]) == 3:
-                    new_world[i][j] = 1
-                    continue
-                new_world[i][j] = 0
-        return new_world
-
-    @staticmethod
-    def __get_near(universe, pos, system=None):
-        if system is None:
-            system = ((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1))
-
-        count = 0
-        for i in system:
-            if universe[(pos[0] + i[0]) % len(universe)][(pos[1] + i[1]) % len(universe[0])]:
-                count += 1
-        return count
-
-
-class BitArrayWorldFactory(WorldFactory):
+class WorldFactory(AbstractWorldFactory):
 
     def __init__(self, width, height):
-        super(BitArrayWorldFactory, self).__init__(width, height)
+        super(WorldFactory, self).__init__(width, height)
 
-        # To performance pack old and new worlds, we allocate 2 bit per cell
+        # To improve the performance of packing the previous and current worlds into an array,
+        # we allocate 2 bit per cell
         self._row_size = row_size = width << 1
         self._size = row_size * height
 
@@ -124,8 +75,8 @@ class BitArrayWorldFactory(WorldFactory):
 
         return new_world
 
-    def pack_two_worlds_to_array(self, old_world, new_world):
+    def pack_two_worlds_into_array(self, prev_world, cur_world):
         result = array('L')
-        for num0, num1 in zip(new_world, old_world):
+        for num0, num1 in zip(cur_world, prev_world):
             result.append(num0 | (num1 << 1))
         return result
