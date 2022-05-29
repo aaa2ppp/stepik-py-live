@@ -75,7 +75,7 @@ class WorldFactory(AbstractWorldFactory):
                 i = r0 + c0
                 subtotals[i] = world[i] + world[r1 + c0] + world[r2 + c0]
 
-        # Now let's sum horizontally to calculate all the neighbors in each 3x3 square...
+        # Now let's sum horizontally to calculate all the neighbors in each 3x3 square (x0)...
 
         for r0 in range(0, size, row_size):
             for c0 in range(row_size):
@@ -83,15 +83,14 @@ class WorldFactory(AbstractWorldFactory):
                 i1 = r0 + (c0 - 1) % row_size
                 i2 = r0 + (c0 + 1) % row_size
 
-                neighbors = (subtotals[i] +
-                             ((subtotals[i] & 0x0FFF_FFFF_FFFF_FFFF) << 4) + (subtotals[i1] >> 60) +
-                             (subtotals[i] >> 4) + ((subtotals[i2] & 0xF) << 60))
+                x0 = (subtotals[i] +
+                      (((subtotals[i] & 0x0FFF_FFFF_FFFF_FFFF) << 4) | (subtotals[i1] >> 60)) +
+                      ((subtotals[i] >> 4) | ((subtotals[i2] & 0xF) << 60)))
 
-                # Bit magic to get new cell state
-                x1 = (neighbors >> 2) & 0x1111_1111_1111_1111
-                x2 = (neighbors >> 1) & 0x1111_1111_1111_1111
-                x3 = neighbors & 0x1111_1111_1111_1111
-                new_world[i] = world[i] & x1 & ~x2 & ~x3 | ~x1 & x2 & x3
+                # ... add bit magic to get new cell states
+                x2 = x0 >> 2
+                x1 = x0 >> 1
+                new_world[i] = (world[i] & x2 & ~x1 & ~x0 | ~x2 & x1 & x0) & 0x1111_1111_1111_1111
 
         return new_world
 
@@ -110,17 +109,17 @@ class WorldFactory(AbstractWorldFactory):
         return new_world
 
     def pack_two_worlds_into_array(self, prev_world, cur_world):
+        """Pack two worlds (previous and current) into an uint32 array (2 bit per cell)"""
+
         result = array('L')
 
         for num0, num1 in zip(cur_world, prev_world):
-            even = num0 | (num1 << 1)  # ~24% of the time it's 0
-            if even:
-                # Next is bit magic. I don't understand how it works. I took it from
-                # https://www.cyberforum.ru/post13690948.html
-                even |= (even >> 2) & 0x0C0C_0C0C_0C0C_0C0C
-                even = (even & 0x000F_000F_000F_000F) | ((even >> 4) & 0x00F0_00F0_00F0_00F0)
-                even = (even & 0x0000_00FF_0000_00FF) | ((even >> 8) & 0x0000_FF00_0000_FF00)
-                even = (even & 0x0000_0000_0000_FFFF) | ((even >> 16) & 0x0000_0000_FFFF_0000)
-            result.append(even)
+            pack = num0 | (num1 << 1)  # ~24% of the time it's 0
+            if pack:
+                pack |= pack >> 2
+                pack = (pack & 0x000F_000F_000F_000F) | ((pack >> 4) & 0x00F0_00F0_00F0_00F0)
+                pack = (pack & 0x0000_00FF_0000_00FF) | ((pack >> 8) & 0x0000_FF00_0000_FF00)
+                pack = (pack & 0x0000_0000_0000_FFFF) | (pack >> 16)
+            result.append(pack)
 
         return result

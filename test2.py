@@ -26,27 +26,34 @@ if factory3.pack_world_into_array(world3) != array_:
     print("FAIL: create (or pack) world64")
     quit(1)
 
-time1, time2, time3 = 0.0, 0.0, 0.0
+time11, time21, time31 = 0.0, 0.0, 0.0
+time12, time22, time32 = 0.0, 0.0, 0.0
 success = True
 
 for _ in range(count):
     start_time = time.time()
     _old_world = world1
     world1 = factory1.create_next_world(world1)
+    time11 += time.time() - start_time
+    start_time = time.time()
     pack1 = factory1.pack_two_worlds_into_array(_old_world, world1)
-    time1 += time.time() - start_time
+    time12 += time.time() - start_time
 
     start_time = time.time()
     _old_world = world2
     world2 = factory2.create_next_world(world2)
+    time21 += time.time() - start_time
+    start_time = time.time()
     pack2 = factory2.pack_two_worlds_into_array(_old_world, world2)
-    time2 += time.time() - start_time
+    time22 += time.time() - start_time
 
     start_time = time.time()
     _old_world = world3
     world3 = factory3.create_next_world(world3)
+    time31 += time.time() - start_time
+    start_time = time.time()
     pack3 = factory3.pack_two_worlds_into_array(_old_world, world3)
-    time3 += time.time() - start_time
+    time32 += time.time() - start_time
 
     if pack2 != pack1:
         print("FAIL: next bitarray")
@@ -60,9 +67,6 @@ for _ in range(count):
         quit(1)
 
 print("SUCCESS")
-print(f"original time: {time1} ms")
-print(f"bitarray time: {time2} ms")
-print(f"world64 time : {time3} ms")
-
-print(f"world64 factory3 _count2/_count1: {factory3._count2 / factory3._count1}")
-print(f"world64 factory3 _count2/_count1: {factory3._count3 / factory3._count1}")
+print(f"original time: {time11} {time12} ms")
+print(f"bitarray time: {time21} {time22} ms")
+print(f"world64 time : {time31} {time32} ms")
