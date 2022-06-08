@@ -91,6 +91,11 @@ class AbstractWorldFactory:
 
 
 if int(os.environ.get('NAIVE_ALGO', 0)):
+    print("Using bitarray world")
     from .bitarray import WorldFactory
-else:
+elif int(os.environ.get('NO_NUMPY', 0)):
+    print("Using world64")
     from .world64 import WorldFactory
+else:
+    print("Using numpy")
+    from .numpy import WorldFactory

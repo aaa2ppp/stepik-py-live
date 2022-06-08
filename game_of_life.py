@@ -13,6 +13,7 @@ class CellState(IntEnum):
 
 
 class CellGeneration:
+    _is_over = False
 
     def __init__(self, *,
                  width: Optional[int] = None,
@@ -36,12 +37,12 @@ class CellGeneration:
 
             self._world_factory = WorldFactory(width, height)
 
-            empty_world = tuple(self._world_factory.create_empty_world())
+            empty_world = self._world_factory.create_empty_world()
             self._prev_world = empty_world  # Now the world was empty, and the Spirit of God hovered over it...
-            self._different_worlds = {empty_world}  # always includes an empty world
+            # self._different_worlds = {empty_world}  # always includes an empty world
 
             if random:
-                self._world = tuple(self._world_factory.create_random_world())
+                self._world = self._world_factory.create_random_world()
             else:
                 self._world = empty_world
         else:
@@ -49,11 +50,11 @@ class CellGeneration:
             self._serial = previous._serial + 1
             self._world_factory = previous._world_factory
             self._prev_world = previous._world
-            self._different_worlds = previous._different_worlds
-            self._world = tuple(self._world_factory.create_next_world(self._prev_world))
+            # self._different_worlds = previous._different_worlds
+            self._world = self._world_factory.create_next_world(self._prev_world)
 
-        self._different_worlds.add(self._world)
-        self._is_over = self._serial >= len(self._different_worlds) - 1
+        # self._different_worlds.add(self._world)
+        # self._is_over = self._serial >= len(self._different_worlds) - 1
 
     @property
     def serial(self) -> int:

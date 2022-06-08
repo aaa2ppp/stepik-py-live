@@ -1,7 +1,6 @@
 from array import array
 from random import randint
 
-from util.bitarray import getBit
 from world import AbstractWorldFactory
 
 
@@ -11,7 +10,7 @@ class WorldFactory(AbstractWorldFactory):
         super(WorldFactory, self).__init__(width, height)
 
         # To improve the performance of the world calculation, we store the world in an array of 64-bit integers,
-        # allocate 4 bits per cell, and size the strings to the size of the array elements.
+        # allocate 4 bits per cell, and align size the row to the size of the array elements.
         self._row_size = row_size = ((width << 2) + 63) >> 6
         self._size = size = row_size * height
         self._subtotals = array('Q', (0,) * size)
@@ -91,20 +90,6 @@ class WorldFactory(AbstractWorldFactory):
                 x2 = x0 >> 2
                 x1 = x0 >> 1
                 new_world[i] = (world[i] & x2 & ~x1 & ~x0 | ~x2 & x1 & x0) & 0x1111_1111_1111_1111
-
-        return new_world
-
-    def create_world_from_array(self, array_):
-        size = self._size
-        new_world = array('Q', (0,) * size)
-
-        i = 0
-        for record in range(size):
-            num = 0
-            for offset in range(0, 64, 4):
-                num |= (getBit(array_, i) << offset)
-                i += 1
-            new_world[record] = num
 
         return new_world
 
