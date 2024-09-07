@@ -1,16 +1,47 @@
-<div id="hiddenCounter" class="hidden">{{ game.counter }}</div>
-<table class="world" style="font-family: monospace;">
-    {% for i in range(0, game.world | length) %}
-    <tr>
-        {% for j in range(0, game.world[i] | length) %}
-            {% if game.world[i][j] %}
-                <td class="cell living-cell">X</td>
-            {% elif game.old_world and game.old_world[i][j] %}
-                <td class="cell dead-cell">D</td>
-            {% else %}
-                <td class="cell">_</td>
-            {% endif %}
-        {% endfor %}
-    </tr>
-    {% endfor %}
-</table>
+<div>
+    <div id="hiddenCounter" class="hidden">{{ generation.serial }}</div>
+    <div id="worldHeader">
+        {%- if generation.is_over -%}
+            <h2 id="gameOver">КОНЕЦ ИГРЫ</h2>
+        {%- else -%}
+            <br>
+        {%- endif -%}
+    </div>
+
+    {# Calculate cell size -#}
+    {# TODO: How to do this using classes if the width and height are dynamic? #}
+    {% if not wss %}
+        wss = (640, 480)
+    {% endif -%}
+    {% set size = (wss[0] * 2 // (generation.width * 3), wss[1] * 2 // (generation.height * 3)) | min -%}
+    {% if size < 8 %}
+        {% set size = 8 %}
+    {% elif size > 32 %}
+        {% set size = 32 %}
+    {% endif -%}
+    {% set cell_size = 'width:{}px;height:{}px;'.format(size, size) -%}
+
+    {% macro show_cell(row, col) -%}
+        {% set cell_state = generation.cell_state(row, col) -%}
+
+        {% if cell_size and (row == 0 or col == 0) -%}
+            {# cell value is for testing only -#}
+            <td class="cell {{ cell_state.name }}-cell"><div style="{{ cell_size }}">{{ ('', 'x', 'D', 'X')[cell_state.value] }}</div></td>
+        {%- else -%}
+            {# cell value is for testing only -#}
+            <td class="cell {{ cell_state.name }}-cell">{{ ('', 'x', 'D', 'X')[cell_state.value] }}</td>
+        {%- endif %}
+    {%- endmacro -%}
+
+    <table id="worldTable" border class="world"> {#- `border` attribute is for testing only -#}
+        <tbody>
+        {%- for row in range(generation.height) -%}
+            <tr>
+                {% for col in range(generation.width) -%}
+                    {{ show_cell(row, col) }}
+                {% endfor -%}
+            </tr>
+        {%- endfor -%}
+        </tbody>
+    </table>
+</div>

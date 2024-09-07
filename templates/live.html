@@ -1,27 +1,33 @@
 {% extends "base.html" %}
 
 {% block app_content %}
-    <!-- TODO: replace table to div -->
+    {# TODO: replace table to div #}
     <table class="centered">
         <tr valign="middle">
             <td>
-                <a href="{{ url_for('index') }}" class="btn btn-warning">На главную</a>
+                <a id="exitButton" href="{{ url_for('index') }}" class="btn btn-warning">На главную</a>
             </td>
             <td>
-                <div id="counter" class="counter">{{ game.counter }}</div>
+                <div id="counter" class="counter">{{ generation.serial }}</div>
             </td>
             <td>
-                <a id="refreshButton" href="{{ url_for('live') }}" class="btn btn-info">Обновить</a>
+                <a id="refreshButton" href="?js=off&serial={{ generation.serial + 1 }}" class="btn btn-info">Обновить</a>
             </td>
         </tr>
-    </table><br>
-    <div id="worldContainer" class="container">
+    </table>
+
+    <div id="worldContainer" class="world-container">
         {% include "world.html" %}
     </div>
 {% endblock %}
 
+{% block navigation %}
+    <p><a href="{{ url_for('nothing_works') }}">Ничего не работает</a></p>
+{% endblock %}
+
 {% block scripts %}
     {{ super() }}
-    <script src="{{ url_for('static', filename='live.js') }}"></script>
+    {% if js -%}
+        <script src="{{ url_for('static', filename='live.js') }}"></script>
+    {%- endif %}
 {% endblock %}
- 

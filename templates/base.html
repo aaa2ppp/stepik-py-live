@@ -6,14 +6,27 @@
     <title>Игра Жизнь</title>
     {% block scripts %}
         <link href="{{ url_for('static', filename='styles.css') }}" rel="stylesheet" type="text/css"/>
+        <script>
+            document.cookie = `wss=${window.screen.width}x${window.screen.height}`;
+        </script>
     {% endblock %}
 </head>
 <body>
-{% block content %}
-    <div class="content">
-        {% block app_content %}{% endblock %}
-    </div>
-{% endblock %}
+<div class="content">
+    {% block content %}
+        <div class="app_content">
+            {% block app_content %}{% endblock %}
+        </div>
+
+        <div class="navigation>">
+            {% block navigation %}
+                <p>
+                    <a href="{{ url_for('index') }}">На главную</a>
+                    | <a href="{{ url_for('nothing_works') }}">Ничего не работает</a>
+                </p>
+            {% endblock %}
+        </div>
+    {% endblock %}
+</div>
 </body>
 </html>
-

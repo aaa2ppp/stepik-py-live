@@ -1,20 +1,36 @@
 {% extends 'base.html' %}
 
 {% block app_content %}
-    <form action="" method="post">
+    <form action="" method="post" novalidate>
         {{ form.csrf_token() }}
         {% for field in form if not field.name in ("csrf_token", "submit") %}
             <p>
                 {{ field.label() }}: {{ field }}
                 {% for error in field.errors %}
-                    {{ error }}
+                    <snap class="error">
+                        <br>{{ error }}
+                    </snap>
                 {% endfor %}
             </p>
         {% endfor %}
-        <div style="font-size: small">
-            <p>Допустимые значения от 2 до 100</p>
+        <div class="remark">
+            <p>Допустимые значения ширины и высоты мира от <code>{{ form.min_size }}</code> до
+                <code>{{ form.max_size }}</code></p>
         </div>
         <p>{{ form.submit(class_="btn btn-primary") }}</p>
     </form>
-    {% include "message-for-reviewers.html" %}
+
+    <div class="column centered text">
+        <hr>
+        {% include "help.html" %}
+        <hr>
+    </div>
+
+{% endblock %}
+
+{% block navigation %}
+    <p>
+        <a href="{{ url_for('new_live', autoupdate='on') }}">Прямая ссылка на игру</a>
+        | <a href="{{ url_for('nothing_works') }}">Ничего не работает</a>
+    </p>
 {% endblock %}

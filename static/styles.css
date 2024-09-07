@@ -5,28 +5,37 @@
     padding-top: 0.5rem;
 }
 
+/*.world-container {*/
+/*}*/
+
 .world {
-    border: 1px solid black;
     border-collapse: collapse;
     margin: auto;
+    font-size: 0;
+    table-layout: fixed;
+    background: whitesmoke;
 }
 
 .cell {
+    /*transition-property: color, background-color;*/
+    /*transition-duration: 100ms;*/
     border: 1px solid black;
-    padding: 5px;
-    color: whitesmoke;
+    padding: 0;
+}
+
+.empty-cell {
     background: whitesmoke;
-    width: 1rem;
-    height: 1rem;
 }
 
 .living-cell {
-    color: lightgreen;
     background: lightgreen;
 }
 
+.surviving-cell {
+    background: green;
+}
+
 .dead-cell {
-    color: darkred;
     background: darkred;
 }
 
@@ -39,7 +48,20 @@
 }
 
 .column {
-    width: 86ch
+    width: 80ch
+}
+
+.error {
+    font-size: small;
+    color: red;
+}
+
+.remark {
+    font-size: small;
+}
+
+.text {
+    text-align: justify;
 }
 
 /* Q: What drugs?.. */
