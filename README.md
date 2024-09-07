@@ -1,4 +1,4 @@
-# stepik-py-quest
+# stepik-py-live
 
 Это реализация мини-проекта 3.3 курса *"Web-фреймворк Flask: введение"* на *stepik.org*.
 
@@ -25,8 +25,8 @@ git version 2.33.1.windows.1
 
 ```
 > cd "%TEMP%"
-> git clone https://github.com/aaa2ppp/stepik-py-quest.git
-Cloning into 'stepik-py-quest'...
+> git clone https://github.com/aaa2ppp/stepik-py-live.git
+Cloning into 'stepik-py-live'...
 ...
 ... done.
 ```
@@ -34,7 +34,7 @@ Cloning into 'stepik-py-quest'...
 ### Инициализируйте проект
 
 ```
-> cd stepik-py-quest
+> cd stepik-py-live
 > python -m venv env
 > env\Scripts\activate.bat
 (env) > pip install -r requirements.txt
@@ -84,7 +84,7 @@ http://127.0.0.1:5000/nothing_works
 ^C
 (env) > env\Scripts\deactivate.bat
 > cd ..
-> rmdir /s /q stepik-py-quest
+> rmdir /s /q stepik-py-live
 ```
 
 ## Спасибо за проделанную работу!
